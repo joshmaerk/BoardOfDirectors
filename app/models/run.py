@@ -4,15 +4,14 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as SAEnum
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, Uuid
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class RunStatus(str, enum.Enum):
+class RunStatus(enum.StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     DONE = "done"
@@ -29,7 +28,7 @@ class Run(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
     board_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("boards.id", ondelete="CASCADE"),
         nullable=False,
     )

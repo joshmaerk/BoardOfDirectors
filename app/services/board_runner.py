@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ class BoardRunner:
                 return
 
             run.status = RunStatus.RUNNING
-            run.started_at = datetime.now(timezone.utc)
+            run.started_at = datetime.now(UTC)
             await session.commit()
 
             try:
@@ -60,12 +60,12 @@ class BoardRunner:
                     director_outputs
                 )
                 run.status = RunStatus.DONE
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 log.exception("run_failed", run_id=str(run_id))
                 run.status = RunStatus.FAILED
                 run.error = str(exc)
             finally:
-                run.finished_at = datetime.now(timezone.utc)
+                run.finished_at = datetime.now(UTC)
                 await session.commit()
 
     async def _load(
@@ -167,11 +167,13 @@ class BoardRunner:
         for round_idx in range(board.rounds):
             transcript = self._format_transcript(history) if history else ""
 
-            async def call(director: Director) -> tuple[Director, LLMResponse]:
+            async def call(
+                director: Director, _transcript: str = transcript
+            ) -> tuple[Director, LLMResponse]:
                 prompt_override = self._override_for(board, director.id)
                 user_content = (
-                    f"Question: {run.input}\n\nDiscussion so far:\n{transcript}"
-                    if transcript
+                    f"Question: {run.input}\n\nDiscussion so far:\n{_transcript}"
+                    if _transcript
                     else run.input
                 )
                 messages = [

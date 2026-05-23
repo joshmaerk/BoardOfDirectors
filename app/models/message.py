@@ -4,14 +4,13 @@ import enum
 import uuid
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, Integer, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey, Index, Integer, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class MessageRole(str, enum.Enum):
+class MessageRole(enum.StrEnum):
     DIRECTOR = "director"
     SYNTHESIS = "synthesis"
 
@@ -21,12 +20,12 @@ class DirectorMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (Index("ix_director_messages_run_id", "run_id"),)
 
     run_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("runs.id", ondelete="CASCADE"),
         nullable=False,
     )
     director_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("directors.id", ondelete="SET NULL"),
         nullable=True,
     )

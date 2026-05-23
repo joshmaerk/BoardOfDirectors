@@ -4,19 +4,18 @@ import enum
 import uuid
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class Visibility(str, enum.Enum):
+class Visibility(enum.StrEnum):
     PRIVATE = "private"
     SHARED = "shared"
 
 
-class BoardMode(str, enum.Enum):
+class BoardMode(enum.StrEnum):
     PARALLEL = "parallel"
     SEQUENTIAL = "sequential"
     DISCUSSION = "discussion"
@@ -36,7 +35,7 @@ class Board(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     rounds: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     synthesis_director_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("directors.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -57,12 +56,12 @@ class BoardDirector(Base):
     __tablename__ = "board_directors"
 
     board_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("boards.id", ondelete="CASCADE"),
         primary_key=True,
     )
     director_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(),
         ForeignKey("directors.id", ondelete="CASCADE"),
         primary_key=True,
     )

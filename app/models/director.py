@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from sqlalchemy import JSON, Float, Index, String, Text
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import Float, Index, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -19,7 +18,7 @@ class Director(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str] = mapped_column(String(64), nullable=False)
     temperature: Mapped[float] = mapped_column(Float, nullable=False, default=0.7)
-    tools: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    tools: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     visibility: Mapped[Visibility] = mapped_column(
         SAEnum(Visibility, name="visibility"),
         nullable=False,
