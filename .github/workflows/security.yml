@@ -37,11 +37,11 @@ jobs:
           pip install "bandit[sarif]>=1.7"
 
       - name: Run Bandit (fail on medium+)
-        run: bandit -r conductor -ll
+        run: bandit -r conductor app -ll
 
       - name: Run Bandit (SARIF for code-scanning)
         if: always()
-        run: bandit -r conductor -f sarif -o bandit.sarif || true
+        run: bandit -r conductor app -f sarif -o bandit.sarif || true
 
       - name: Upload SARIF to GitHub code-scanning
         if: always()

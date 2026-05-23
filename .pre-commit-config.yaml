@@ -22,9 +22,19 @@ repos:
     rev: v1.19.1
     hooks:
       - id: mypy
-        files: ^conductor/
+        files: ^(conductor|app)/
         additional_dependencies:
           - types-PyYAML
+          - types-python-jose>=3.3
           - anthropic>=0.40.0
           - click>=8.1.0
           - rich>=13.7.0
+          - fastapi>=0.115
+          - pydantic>=2.9
+          - pydantic-settings>=2.6
+          - sqlalchemy[asyncio]>=2.0
+          - httpx>=0.28
+          - openai>=1.55
+          - structlog>=24.4
+          - sse-starlette>=2.1
+          - python-jose[cryptography]>=3.3

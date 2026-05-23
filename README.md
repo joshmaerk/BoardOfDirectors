@@ -201,3 +201,74 @@ Acht Test-Module decken: Persona-Loading + Joshua-Profil-Injection, YAML-Config,
 ## Out of Scope (V1)
 
 Web-UI, Voice-Input, Embedding-RAG, Persona-Dynamik zur Laufzeit, Multi-User, Cloud-Deployment, native Subagent-Invocation als Default-Pfad (die `.md`-Files sind dafür aber kompatibel).
+
+---
+
+# Backend API für Streamlit (`app/`)
+
+Neben dem `conductor/`-CLI liegt im Repo ein eigenständiges **FastAPI-Backend**
+unter `app/`, das von der bestehenden Streamlit-App (mit Entra/Azure-AD-Auth)
+angesprochen wird. Multi-User, DB-persistent, Multi-Provider.
+
+## Stack
+
+- Python 3.11+, FastAPI, Pydantic v2
+- SQLAlchemy 2 (async) + asyncpg + Alembic
+- Provider via `LLMClient`-Protocol:
+  - **Azure OpenAI** (`openai`-SDK im Azure-Modus)
+  - **Azure AI Foundry** für Claude-Modelle (`azure-ai-inference` SDK,
+    Managed-Identity oder Key)
+- Entra (Azure AD) JWT-Validierung via JWKS
+- SSE-Live-Stream der Director-Messages während eines Runs
+
+## Local development
+
+```bash
+cp .env.example .env
+# Für lokale Iteration ohne echten Tenant:
+#   AUTH_DEV_BYPASS=true
+docker compose up --build
+# API auf http://localhost:8000  ·  OpenAPI auf /docs
+```
+
+Migrations manuell:
+
+```bash
+alembic upgrade head
+```
+
+## API-Endpoints (v1)
+
+Alle unter `/api/v1`, alle protected per `Authorization: Bearer <entra-token>`
+außer `/healthz`.
+
+- `GET /healthz`
+- `GET /me`
+- `GET/POST /directors` · `GET/PUT/DELETE /directors/{id}`
+- `GET/POST /boards` · `GET/PUT/DELETE /boards/{id}`
+- `POST /boards/{id}/runs` — startet einen Run (async, Antwort sofort)
+- `GET /runs/{id}` — Status + alle Messages
+- `GET /runs/{id}/messages`
+- `POST /runs/{id}/cancel`
+- `GET /runs/{id}/stream` — Server-Sent Events mit Live-Director-Messages
+
+OpenAPI-Schema unter `/openapi.json`.
+
+## Streamlit-Integration
+
+Die Streamlit-App reicht das Entra-Access-Token im `Authorization`-Header weiter.
+Das Backend validiert es gegen Entra-JWKS, extrahiert `oid` (stabile User-ID)
+und nutzt diese für Ownership/Authorization.
+
+## Konfiguration (Auszug)
+
+Siehe `.env.example`. Wichtigste Variablen:
+
+- `AZURE_TENANT_ID`, `AZURE_API_AUDIENCE` — Entra-Validierung
+- `AZURE_OPENAI_*` — Endpoint, Key, Deployment-Map
+- `AZURE_AI_FOUNDRY_*` — Endpoint, Key oder Managed-Identity, Deployment-Map (Claude)
+- `LLM_PROVIDER_MAP` — Modellname-Präfix → Provider-ID
+- `DATABASE_URL` — async Postgres URL (`postgresql+asyncpg://...`)
+- `ALLOWED_ORIGINS` — kommagetrennte Liste (Streamlit-Origin)
+- `AUTH_DEV_BYPASS` — nur lokal, akzeptiert jeden Request als Fake-User
+
