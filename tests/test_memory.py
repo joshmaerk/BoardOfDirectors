@@ -1,4 +1,5 @@
 """Tests for the per-persona JSON memory store."""
+
 from __future__ import annotations
 
 import json

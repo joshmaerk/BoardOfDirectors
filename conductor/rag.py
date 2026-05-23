@@ -1,4 +1,5 @@
 """Obsidian-vault RAG via whitelisted file reading."""
+
 from __future__ import annotations
 
 import fnmatch

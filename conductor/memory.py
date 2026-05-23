@@ -1,4 +1,5 @@
 """Per-persona JSON memory (opt-in via --memory flag)."""
+
 from __future__ import annotations
 
 import json

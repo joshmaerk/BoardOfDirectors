@@ -1,10 +1,11 @@
 """Tests for the DebateEngine using a fake Claude client."""
+
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
 
 import pytest
 
@@ -12,7 +13,6 @@ from conductor.client import BudgetExceededError, ConverseResult, TokenLedger
 from conductor.config import Config
 from conductor.debate_engine import (
     CONVERGENCE_PROMPT,
-    DEVILS_REACTION_PROMPT,
     DebateEngine,
     _parse_convergence_json,
 )
@@ -33,7 +33,7 @@ class FakeClient:
     ledger: TokenLedger
     text_for: Callable[[RecordedCall, int], str] = field(default=lambda call, i: "OK")
     calls: list[RecordedCall] = field(default_factory=list)
-    fail_after: Optional[int] = None
+    fail_after: int | None = None
     fixed_in_tokens: int = 10
     fixed_out_tokens: int = 20
 
@@ -109,7 +109,8 @@ def test_persona_filter_restricts_active_speakers():
         ledger=ledger,
         text_for=lambda call, idx: (
             "## Situation\n.\n\n## Complication\n.\n\n## Question\n.\n\n## Answer\n- a\n\n## Empfehlung\n."
-            if "SCQA" in call.user_message else "x"
+            if "SCQA" in call.user_message
+            else "x"
         ),
     )
     engine = DebateEngine(config=cfg, client=fake, personas=personas)
@@ -126,15 +127,13 @@ def test_devils_advocate_receives_devils_reaction_prompt():
         ledger=ledger,
         text_for=lambda call, idx: (
             "## Situation\n.\n\n## Complication\n.\n\n## Question\n.\n\n## Answer\n- a\n\n## Empfehlung\n."
-            if "SCQA" in call.user_message else "x"
+            if "SCQA" in call.user_message
+            else "x"
         ),
     )
     engine = DebateEngine(config=cfg, client=fake, personas=personas)
     asyncio.run(engine.run("F"))
-    devils_r2 = [
-        c for c in fake.calls
-        if "blinde Flecken" in c.user_message
-    ]
+    devils_r2 = [c for c in fake.calls if "blinde Flecken" in c.user_message]
     assert len(devils_r2) == 1
 
 
@@ -146,12 +145,16 @@ def test_memory_entries_passed_into_system_prompt():
         ledger=ledger,
         text_for=lambda call, idx: (
             "## Situation\n.\n\n## Complication\n.\n\n## Question\n.\n\n## Answer\n- a\n\n## Empfehlung\n."
-            if "SCQA" in call.user_message else "x"
+            if "SCQA" in call.user_message
+            else "x"
         ),
     )
     mem = {"stratege": [{"date": "2026-01-01", "topic": "Reorg X", "summary": "Empfehlung Y"}]}
     engine = DebateEngine(
-        config=cfg, client=fake, personas=personas, memory_entries=mem,
+        config=cfg,
+        client=fake,
+        personas=personas,
+        memory_entries=mem,
     )
     asyncio.run(engine.run("F", persona_filter=["stratege"]))
     stratege_calls = [c for c in fake.calls if "DER STRATEGE" in c.system]
@@ -192,7 +195,10 @@ def test_convergence_callback_skips_round_3():
 
     fake = FakeClient(ledger=ledger, text_for=text_for)
     engine = DebateEngine(
-        config=cfg, client=fake, personas=personas, on_convergence=confirm,
+        config=cfg,
+        client=fake,
+        personas=personas,
+        on_convergence=confirm,
     )
     state = asyncio.run(engine.run("F"))
     assert state.convergence is not None
@@ -202,7 +208,7 @@ def test_convergence_callback_skips_round_3():
 
 
 def test_parse_convergence_json_handles_extra_text():
-    text = "Hier ist das Ergebnis:\n{\"converged\": true, \"personas\": [\"a\", \"b\"]}\nEnde."
+    text = 'Hier ist das Ergebnis:\n{"converged": true, "personas": ["a", "b"]}\nEnde.'
     result = _parse_convergence_json(text)
     assert result.converged
     assert result.personas == ["a", "b"]

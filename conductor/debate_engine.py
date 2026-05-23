@@ -1,11 +1,12 @@
 """Roundtable orchestrator: R1 parallel, R2 sequential, R3 parallel, R4 synthesis."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Optional
 
 from .client import BudgetExceededError, ClaudeClient
 from .config import Config
@@ -114,7 +115,7 @@ class DebateEngine:
     rag: RagTool | None = None
     display: RoundtableDisplay | None = None
     memory_entries: dict[str, list[dict]] = field(default_factory=dict)
-    on_convergence: Optional[SkipR3Callback] = None
+    on_convergence: SkipR3Callback | None = None
     state: SessionState | None = field(default=None, init=False)
 
     def _system_for(self, persona: Persona) -> str:
@@ -150,11 +151,9 @@ class DebateEngine:
             state.abort_reason = str(e)
         return state
 
-    async def _moderator_open(
-        self, moderator: Persona, question: str, state: SessionState
-    ) -> None:
+    async def _moderator_open(self, moderator: Persona, question: str, state: SessionState) -> None:
         if self.display:
-            self.display.set_header(f"Round 0/4 - Moderator Opening")
+            self.display.set_header("Round 0/4 - Moderator Opening")
             self.display.reset_panes()
             self.display.add_pane(
                 moderator.name, moderator.display_name, moderator.avatar, style="cyan"
@@ -169,9 +168,7 @@ class DebateEngine:
         )
         state.moderator_opening = result.text.strip()
 
-    async def _round1(
-        self, personas: list[Persona], question: str, state: SessionState
-    ) -> None:
+    async def _round1(self, personas: list[Persona], question: str, state: SessionState) -> None:
         if self.display:
             self.display.set_header("Round 1/4 - Opening Statements")
             self.display.reset_panes()
@@ -190,9 +187,7 @@ class DebateEngine:
         ]
         await asyncio.gather(*tasks)
 
-    async def _round2(
-        self, personas: list[Persona], question: str, state: SessionState
-    ) -> None:
+    async def _round2(self, personas: list[Persona], question: str, state: SessionState) -> None:
         round1_summary = self._format_round(state.round(1))
         if self.display:
             self.display.set_header("Round 2/4 - Reaction Round")
@@ -201,9 +196,7 @@ class DebateEngine:
         for p in personas:
             if self.display:
                 self.display.add_pane(p.name, p.display_name, p.avatar)
-            template = (
-                DEVILS_REACTION_PROMPT if p.name == "devils-advocate" else REACTION_PROMPT
-            )
+            template = DEVILS_REACTION_PROMPT if p.name == "devils-advocate" else REACTION_PROMPT
             await self._run_persona(
                 p,
                 template.format(question=question, round1_summary=round1_summary),
@@ -212,9 +205,7 @@ class DebateEngine:
                 state=state,
             )
 
-    async def _round3(
-        self, personas: list[Persona], question: str, state: SessionState
-    ) -> None:
+    async def _round3(self, personas: list[Persona], question: str, state: SessionState) -> None:
         transcript = self._format_transcript(state, include_round=2)
         if self.display:
             self.display.set_header("Round 3/4 - Final Position")
@@ -234,9 +225,7 @@ class DebateEngine:
         ]
         await asyncio.gather(*tasks)
 
-    async def _synthesis(
-        self, moderator: Persona, question: str, state: SessionState
-    ) -> None:
+    async def _synthesis(self, moderator: Persona, question: str, state: SessionState) -> None:
         transcript = self._format_transcript(state, include_round=3)
         if self.display:
             self.display.set_header("Round 4/4 - Moderator Synthese (SCQA)")

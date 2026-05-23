@@ -1,4 +1,5 @@
 """Markdown archive writer for completed roundtable sessions."""
+
 from __future__ import annotations
 
 import re
@@ -46,15 +47,18 @@ class Archive:
         out_dir = Path(self.config.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         path = out_dir / filename
-        path.write_text(self._render(
-            state=state,
-            ledger=ledger,
-            use_case=use_case,
-            memory_loaded=memory_loaded,
-            persona_names=persona_names or [],
-            duration_seconds=duration_seconds,
-            timestamp=ts,
-        ), encoding="utf-8")
+        path.write_text(
+            self._render(
+                state=state,
+                ledger=ledger,
+                use_case=use_case,
+                memory_loaded=memory_loaded,
+                persona_names=persona_names or [],
+                duration_seconds=duration_seconds,
+                timestamp=ts,
+            ),
+            encoding="utf-8",
+        )
         return path
 
     def _render(

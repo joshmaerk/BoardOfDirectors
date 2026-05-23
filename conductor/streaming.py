@@ -1,10 +1,11 @@
 """Rich-based multi-pane live streaming for the roundtable."""
+
 from __future__ import annotations
 
 import threading
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from rich.console import Console, Group
 from rich.live import Live
@@ -29,7 +30,7 @@ class RoundtableDisplay:
     console: Console = field(default_factory=Console)
     ledger: TokenLedger | None = None
     header: str = ""
-    panes: "OrderedDict[str, PaneState]" = field(default_factory=OrderedDict)
+    panes: OrderedDict[str, PaneState] = field(default_factory=OrderedDict)
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _live: Live | None = None
 
@@ -45,7 +46,7 @@ class RoundtableDisplay:
             self._live.stop()
             self._live = None
 
-    def __enter__(self) -> "RoundtableDisplay":
+    def __enter__(self) -> RoundtableDisplay:
         self.open()
         return self
 
@@ -85,9 +86,7 @@ class RoundtableDisplay:
     def _render(self) -> Group:
         items = []
         if self.header:
-            items.append(
-                Panel(Text(self.header, style="bold cyan"), border_style="cyan")
-            )
+            items.append(Panel(Text(self.header, style="bold cyan"), border_style="cyan"))
         for pane in self.panes.values():
             body = Text(pane.text or "...", style=pane.style)
             title = f"{pane.avatar}  {pane.title}"

@@ -1,4 +1,5 @@
 """Tests for persona loading and Joshua-profile injection."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,4 +1,5 @@
 """Persona loader for .claude/agents/*.md files."""
+
 from __future__ import annotations
 
 import re
@@ -103,7 +104,7 @@ class PersonaRegistry:
     personas: dict[str, Persona] = field(default_factory=dict)
 
     @classmethod
-    def load_all(cls, agents_dir: Path | str = ".claude/agents") -> "PersonaRegistry":
+    def load_all(cls, agents_dir: Path | str = ".claude/agents") -> PersonaRegistry:
         agents_dir = Path(agents_dir)
         if not agents_dir.exists():
             raise FileNotFoundError(f"Agents directory not found: {agents_dir}")

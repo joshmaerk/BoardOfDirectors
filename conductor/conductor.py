@@ -1,4 +1,5 @@
 """Session orchestrator: wires config, personas, client, engine, archive, memory."""
+
 from __future__ import annotations
 
 import asyncio
@@ -19,8 +20,15 @@ from .streaming import RoundtableDisplay
 
 USE_CASE_KEYWORDS = {
     "Stakeholder-Kommunikation": (
-        "vorstand", "betriebsrat", "kommunikation", "e-mail", "email", "präsentation",
-        "stakeholder", "gespräch", "aufsichtsrat",
+        "vorstand",
+        "betriebsrat",
+        "kommunikation",
+        "e-mail",
+        "email",
+        "präsentation",
+        "stakeholder",
+        "gespräch",
+        "aufsichtsrat",
     ),
 }
 

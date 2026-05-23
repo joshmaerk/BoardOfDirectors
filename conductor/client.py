@@ -1,13 +1,17 @@
 """Wrapper around AsyncAnthropic with cumulative token tracking and budget enforcement."""
+
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any
 
 from anthropic import AsyncAnthropic
+from anthropic.types import TextBlock, ToolUseBlock
 
-from .rag import RagTool, TOOL_SCHEMA as RAG_TOOL_SCHEMA
+from .rag import TOOL_SCHEMA as RAG_TOOL_SCHEMA
+from .rag import RagTool
 
 
 class BudgetExceededError(RuntimeError):
@@ -80,13 +84,11 @@ class ClaudeClient:
         user_message: str,
         max_tokens: int,
         rag: RagTool | None = None,
-        on_text: Optional[Callable[[str], None]] = None,
+        on_text: Callable[[str], None] | None = None,
     ) -> ConverseResult:
         self.ledger.check()
         tools = [RAG_TOOL_SCHEMA] if rag is not None else None
-        messages: list[dict[str, Any]] = [
-            {"role": "user", "content": user_message}
-        ]
+        messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
         aggregate_text = ""
         used_paths: list[str] = []
         total_in = 0
@@ -125,16 +127,17 @@ class ClaudeClient:
             self.ledger.add(final.usage.input_tokens, final.usage.output_tokens)
             stop_reason = final.stop_reason or ""
 
-            tool_uses = [b for b in final.content if getattr(b, "type", None) == "tool_use"]
+            tool_uses: list[ToolUseBlock] = [
+                b for b in final.content if isinstance(b, ToolUseBlock)
+            ]
             if stop_reason != "tool_use" or not tool_uses or rag is None:
                 break
 
             assistant_content: list[dict[str, Any]] = []
             for block in final.content:
-                btype = getattr(block, "type", None)
-                if btype == "text":
+                if isinstance(block, TextBlock):
                     assistant_content.append({"type": "text", "text": block.text})
-                elif btype == "tool_use":
+                elif isinstance(block, ToolUseBlock):
                     assistant_content.append(
                         {
                             "type": "tool_use",
@@ -148,7 +151,8 @@ class ClaudeClient:
             tool_results: list[dict[str, Any]] = []
             for tu in tool_uses:
                 if tu.name == "read_obsidian_note":
-                    rel_path = (tu.input or {}).get("relative_path", "")
+                    tu_input = tu.input if isinstance(tu.input, dict) else {}
+                    rel_path = str(tu_input.get("relative_path", ""))
                     content = rag.read(rel_path)
                     if rag.is_allowed(rel_path):
                         used_paths.append(rel_path)

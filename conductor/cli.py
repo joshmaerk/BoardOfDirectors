@@ -1,4 +1,5 @@
 """click-based CLI entry point."""
+
 from __future__ import annotations
 
 import asyncio
@@ -10,8 +11,8 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from .archive import Archive
-from .config import Config
 from .conductor import SessionRunner
+from .config import Config
 from .streaming import RoundtableDisplay
 
 DEFAULT_CONFIG_PATH = "config.yaml"
@@ -107,9 +108,7 @@ def ask(
     try:
         state, path = asyncio.run(_go())
     except KeyboardInterrupt:
-        click.echo(
-            "\nSession abgebrochen. Teil-Archiv wurde geschrieben.", err=True
-        )
+        click.echo("\nSession abgebrochen. Teil-Archiv wurde geschrieben.", err=True)
         sys.exit(130)
 
     click.echo(f"\nArchiv geschrieben: {path}")

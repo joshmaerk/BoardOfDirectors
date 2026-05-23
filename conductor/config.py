@@ -1,4 +1,5 @@
 """YAML configuration loader."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -60,18 +61,17 @@ class Config:
     memory: MemoryConfig = field(default_factory=MemoryConfig)
 
     @classmethod
-    def load(cls, path: Path | str = "config.yaml") -> "Config":
+    def load(cls, path: Path | str = "config.yaml") -> Config:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(
-                f"Config file not found: {path}. "
-                f"Kopiere config.yaml.example nach config.yaml."
+                f"Config file not found: {path}. Kopiere config.yaml.example nach config.yaml."
             )
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         return cls.from_dict(raw)
 
     @classmethod
-    def from_dict(cls, raw: dict[str, Any]) -> "Config":
+    def from_dict(cls, raw: dict[str, Any]) -> Config:
         api = ApiConfig(**(raw.get("api") or {}))
         obs_raw = raw.get("obsidian") or {}
         obs = ObsidianConfig(

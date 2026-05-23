@@ -1,4 +1,5 @@
 """Tests for the markdown archive writer."""
+
 from __future__ import annotations
 
 import re
