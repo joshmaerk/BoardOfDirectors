@@ -41,24 +41,14 @@ class BoardRunner:
 
             try:
                 if board.mode == BoardMode.PARALLEL:
-                    director_outputs = await self._run_parallel(
-                        session, run, board, directors
-                    )
+                    director_outputs = await self._run_parallel(session, run, board, directors)
                 elif board.mode == BoardMode.SEQUENTIAL:
-                    director_outputs = await self._run_sequential(
-                        session, run, board, directors
-                    )
+                    director_outputs = await self._run_sequential(session, run, board, directors)
                 else:
-                    director_outputs = await self._run_discussion(
-                        session, run, board, directors
-                    )
+                    director_outputs = await self._run_discussion(session, run, board, directors)
 
-                synthesis = await self._maybe_synthesize(
-                    session, run, board, director_outputs
-                )
-                run.result_summary = synthesis or self._fallback_summary(
-                    director_outputs
-                )
+                synthesis = await self._maybe_synthesize(session, run, board, director_outputs)
+                run.result_summary = synthesis or self._fallback_summary(director_outputs)
                 run.status = RunStatus.DONE
             except Exception as exc:
                 log.exception("run_failed", run_id=str(run_id))
@@ -75,9 +65,7 @@ class BoardRunner:
         if run is None:
             return None, None, []
         board = await session.scalar(
-            select(Board)
-            .options(selectinload(Board.members))
-            .where(Board.id == run.board_id)
+            select(Board).options(selectinload(Board.members)).where(Board.id == run.board_id)
         )
         if board is None:
             return None, run, []
@@ -203,7 +191,7 @@ class BoardRunner:
                 history.append((director, response.content))
             await session.commit()
 
-        return [(d, c) for d, c in history[-len(directors):]] if directors else []
+        return [(d, c) for d, c in history[-len(directors) :]] if directors else []
 
     async def _maybe_synthesize(
         self,
@@ -272,9 +260,7 @@ class BoardRunner:
 
     @staticmethod
     def _format_transcript(items: list[tuple[Director, str]]) -> str:
-        return "\n\n".join(
-            f"[{d.name} — {d.role}]\n{content}" for d, content in items
-        )
+        return "\n\n".join(f"[{d.name} — {d.role}]\n{content}" for d, content in items)
 
     @staticmethod
     def _fallback_summary(outputs: list[tuple[Director, str]]) -> str:

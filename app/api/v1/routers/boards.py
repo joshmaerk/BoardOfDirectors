@@ -22,15 +22,11 @@ async def _verify_directors_accessible(
 ) -> None:
     if not director_ids:
         return
-    result = await db.scalars(
-        select(Director).where(Director.id.in_(director_ids))
-    )
+    result = await db.scalars(select(Director).where(Director.id.in_(director_ids)))
     by_id = {d.id: d for d in result}
     for did in director_ids:
         d = by_id.get(did)
-        if d is None or (
-            d.owner_id != user.oid and d.visibility != Visibility.SHARED
-        ):
+        if d is None or (d.owner_id != user.oid and d.visibility != Visibility.SHARED):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Director {did} not found or not accessible",
@@ -54,9 +50,7 @@ async def list_boards(
     user: CurrentUser = Depends(get_current_user),
 ) -> list[Board]:
     result = await db.scalars(
-        select(Board)
-        .options(selectinload(Board.members))
-        .where(Board.owner_id == user.oid)
+        select(Board).options(selectinload(Board.members)).where(Board.owner_id == user.oid)
     )
     return list(result)
 
@@ -67,9 +61,7 @@ async def create_board(
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ) -> Board:
-    await _verify_directors_accessible(
-        db, user, [m.director_id for m in payload.members]
-    )
+    await _verify_directors_accessible(db, user, [m.director_id for m in payload.members])
     data = payload.model_dump(exclude={"members"})
     board = Board(owner_id=user.oid, **data)
     board.members = _members_from_payload(payload.members)
@@ -85,9 +77,7 @@ async def _get_owned_board(
     user: CurrentUser,
 ) -> Board:
     board = await db.scalar(
-        select(Board)
-        .options(selectinload(Board.members))
-        .where(Board.id == board_id)
+        select(Board).options(selectinload(Board.members)).where(Board.id == board_id)
     )
     if board is None or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
@@ -115,9 +105,7 @@ async def update_board(
     for field, value in data.items():
         setattr(board, field, value)
     if payload.members is not None:
-        await _verify_directors_accessible(
-            db, user, [m.director_id for m in payload.members]
-        )
+        await _verify_directors_accessible(db, user, [m.director_id for m in payload.members])
         board.members.clear()
         await db.flush()
         board.members = _members_from_payload(payload.members)

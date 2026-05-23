@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any, cast
 
 from openai import AsyncAzureOpenAI
 
@@ -35,9 +36,10 @@ class AzureOpenAIClient:
     ) -> LLMResponse:
         deployment = self._resolve_deployment(model)
         started = time.perf_counter()
+        payload: list[Any] = [{"role": m.role, "content": m.content} for m in messages]
         completion = await self._client.chat.completions.create(
             model=deployment,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
+            messages=cast(Any, payload),
             temperature=temperature,
         )
         latency_ms = int((time.perf_counter() - started) * 1000)

@@ -1,0 +1,33 @@
+api:
+  model: "claude-opus-4-7"
+  max_retries: 3
+
+obsidian:
+  vault_path: "/Users/joshua/Obsidian/MainVault"
+  allowed_subfolders:
+    - "10-Strategie"
+    - "20-OE-Vertriebssteuerung"
+    - "30-Stakeholder"
+  excluded_patterns:
+    - "*.private.md"
+    - "Daily/*"
+
+debate:
+  rounds: 3
+  token_budget_total: 80000
+  token_budget_per_persona:
+    opening: 400
+    reaction: 300
+    final: 150
+  moderator_synthesis_tokens: 1200
+  convergence_detection: true
+
+archive:
+  output_dir: "./board-archives"
+  format: "markdown"
+  include_token_counts: true
+
+memory:
+  enabled_by_default: false
+  storage_dir: "./board-archives/.memory"
+  max_entries_per_persona: 50

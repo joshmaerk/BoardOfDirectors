@@ -1,19 +1,28 @@
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg
 *.egg-info/
 .venv/
 venv/
 .env
 .env.local
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
 .mypy_cache/
 .ruff_cache/
-.coverage
-htmlcov/
-dist/
-build/
 .idea/
 .vscode/
 *.db
 *.sqlite
+
+# Project-specific
+board-archives/
+config.yaml
+
+# OS
+.DS_Store
+Thumbs.db

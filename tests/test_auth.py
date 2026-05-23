@@ -66,9 +66,7 @@ def signing_keys():
 async def _get_whoami(token: str | None) -> tuple[int, dict]:
     app = _build_app()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/whoami", headers=headers)
     return resp.status_code, resp.json()
 

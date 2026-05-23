@@ -32,10 +32,7 @@ class _JwksCache:
         self._fetched_at: float = 0.0
 
     async def get(self, jwks_url: str, kid: str) -> dict[str, Any] | None:
-        if (
-            kid not in self._keys
-            or time.time() - self._fetched_at > _JWKS_TTL_SECONDS
-        ):
+        if kid not in self._keys or time.time() - self._fetched_at > _JWKS_TTL_SECONDS:
             await self._refresh(jwks_url)
         return self._keys.get(kid)
 
@@ -100,9 +97,7 @@ def _claims_to_user(claims: dict[str, Any]) -> CurrentUser:
         )
     return CurrentUser(
         oid=str(oid),
-        username=str(
-            claims.get("preferred_username") or claims.get("upn") or oid
-        ),
+        username=str(claims.get("preferred_username") or claims.get("upn") or oid),
         name=claims.get("name"),
         roles=tuple(claims.get("roles", []) or []),
         raw_claims=claims,

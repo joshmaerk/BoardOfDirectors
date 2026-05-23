@@ -140,9 +140,7 @@ async def test_sequential_mode_runs_each_director_once_in_order(
 async def test_discussion_mode_produces_message_per_round(
     session_factory, fake_llm, patched_session_local
 ):
-    run_id, _ = await _seed_board(
-        session_factory, mode=BoardMode.DISCUSSION, rounds=3
-    )
+    run_id, _ = await _seed_board(session_factory, mode=BoardMode.DISCUSSION, rounds=3)
 
     await BoardRunner(fake_llm).execute(run_id)
 
@@ -156,9 +154,7 @@ async def test_discussion_mode_produces_message_per_round(
 async def test_synthesis_director_emits_final_message(
     session_factory, fake_llm, patched_session_local
 ):
-    run_id, _ = await _seed_board(
-        session_factory, mode=BoardMode.PARALLEL, synth=True
-    )
+    run_id, _ = await _seed_board(session_factory, mode=BoardMode.PARALLEL, synth=True)
 
     await BoardRunner(fake_llm).execute(run_id)
 
@@ -169,9 +165,7 @@ async def test_synthesis_director_emits_final_message(
     assert run.result_summary == synthesis[0].content
 
 
-async def test_failing_llm_marks_run_failed(
-    session_factory, patched_session_local
-):
+async def test_failing_llm_marks_run_failed(session_factory, patched_session_local):
     class BrokenLLM:
         async def chat(self, **_kwargs):
             raise RuntimeError("boom")

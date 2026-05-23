@@ -142,17 +142,13 @@ async def stream_run(
                     yield {
                         "event": "message",
                         "data": json.dumps(
-                            DirectorMessageOut.model_validate(msg).model_dump(
-                                mode="json"
-                            )
+                            DirectorMessageOut.model_validate(msg).model_dump(mode="json")
                         ),
                     }
                 if run.status in terminal:
                     yield {
                         "event": "status",
-                        "data": json.dumps(
-                            RunOut.model_validate(run).model_dump(mode="json")
-                        ),
+                        "data": json.dumps(RunOut.model_validate(run).model_dump(mode="json")),
                     }
                     return
             await asyncio.sleep(1.0)

@@ -32,9 +32,7 @@ async def test_update_director(client):
     create = await client.post("/api/v1/directors", json=_payload())
     did = create.json()["id"]
 
-    update = await client.put(
-        f"/api/v1/directors/{did}", json={"temperature": 0.9}
-    )
+    update = await client.put(f"/api/v1/directors/{did}", json={"temperature": 0.9})
     assert update.status_code == 200
     assert update.json()["temperature"] == 0.9
 
@@ -59,9 +57,7 @@ async def test_owner_isolation(client, app, fake_user, other_user):
     assert listing.status_code == 200
     assert listing.json() == []
 
-    forbidden = await client.put(
-        f"/api/v1/directors/{did}", json={"temperature": 0.1}
-    )
+    forbidden = await client.put(f"/api/v1/directors/{did}", json={"temperature": 0.1})
     assert forbidden.status_code == 404
 
     login_as(app, fake_user)

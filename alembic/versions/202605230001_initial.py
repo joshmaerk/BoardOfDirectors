@@ -5,13 +5,15 @@ Revises:
 Create Date: 2026-05-23
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "202605230001"
 down_revision: str | Sequence[str] | None = None
@@ -21,9 +23,7 @@ depends_on: str | Sequence[str] | None = None
 
 visibility_enum = sa.Enum("private", "shared", name="visibility")
 board_mode_enum = sa.Enum("parallel", "sequential", "discussion", name="board_mode")
-run_status_enum = sa.Enum(
-    "pending", "running", "done", "failed", "cancelled", name="run_status"
-)
+run_status_enum = sa.Enum("pending", "running", "done", "failed", "cancelled", name="run_status")
 message_role_enum = sa.Enum("director", "synthesis", name="message_role")
 
 
@@ -186,9 +186,7 @@ def upgrade() -> None:
         ),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("prompt_tokens", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column(
-            "completion_tokens", sa.Integer(), nullable=False, server_default="0"
-        ),
+        sa.Column("completion_tokens", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("latency_ms", sa.Integer(), nullable=False, server_default="0"),
         sa.Column(
             "created_at",

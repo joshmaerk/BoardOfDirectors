@@ -1,7 +1,15 @@
+"""Shared pytest fixtures (both `conductor/` and `app/` tests)."""
+
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import AsyncIterator
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pytest
 import pytest_asyncio
@@ -17,6 +25,7 @@ os.environ.setdefault("AUTH_DEV_BYPASS", "true")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 from app.api.v1.deps import get_llm_client
+from app.api.v1.routers import runs as runs_router_module
 from app.core.db import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.main import create_app
@@ -37,9 +46,7 @@ class FakeLLMClient:
         temperature: float,
     ) -> LLMResponse:
         self.calls.append((model, list(messages), temperature))
-        last_user = next(
-            (m.content for m in reversed(messages) if m.role == "user"), ""
-        )
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
         system = next((m.content for m in messages if m.role == "system"), "")
         echo = f"[{model}] system={system[:30]} user={last_user[:60]}"
         return LLMResponse(
@@ -120,19 +127,20 @@ async def app(session_factory, fake_user, fake_llm):
     fastapi_app.dependency_overrides[get_current_user] = override_user
     fastapi_app.dependency_overrides[get_llm_client] = override_llm
 
-    original_session_local = board_runner_module.SessionLocal
+    original_runner_sl = board_runner_module.SessionLocal
+    original_runs_router_sl = runs_router_module.SessionLocal
     board_runner_module.SessionLocal = session_factory
+    runs_router_module.SessionLocal = session_factory
     try:
         yield fastapi_app
     finally:
-        board_runner_module.SessionLocal = original_session_local
+        board_runner_module.SessionLocal = original_runner_sl
+        runs_router_module.SessionLocal = original_runs_router_sl
 
 
 @pytest_asyncio.fixture
 async def client(app) -> AsyncIterator[AsyncClient]:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
