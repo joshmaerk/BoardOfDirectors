@@ -45,11 +45,6 @@ async def create_run(
     if board is None or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
 
-    if payload.mode_override is not None:
-        board.mode = payload.mode_override
-    if payload.rounds_override is not None:
-        board.rounds = payload.rounds_override
-
     run = Run(
         board_id=board.id,
         owner_id=user.oid,
@@ -61,7 +56,12 @@ async def create_run(
     await db.refresh(run)
 
     runner = BoardRunner(llm)
-    background.add_task(runner.execute, run.id)
+    background.add_task(
+        runner.execute,
+        run.id,
+        mode_override=payload.mode_override,
+        rounds_override=payload.rounds_override,
+    )
     return run
 
 
@@ -116,10 +116,13 @@ async def cancel_run(
 @router.get("/runs/{run_id}/stream")
 async def stream_run(
     run_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    await _get_owned_run(run_id, db, user)
+    # Ownership check uses its own short-lived session and is released
+    # immediately — the request-scoped dependency would otherwise keep a
+    # pool connection open for the full SSE lifetime.
+    async with SessionLocal() as ownership_session:
+        await _get_owned_run(run_id, ownership_session, user)
 
     async def event_source() -> AsyncIterator[dict[str, str]]:
         seen: set[uuid.UUID] = set()

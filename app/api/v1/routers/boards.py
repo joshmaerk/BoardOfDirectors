@@ -61,7 +61,10 @@ async def create_board(
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ) -> Board:
-    await _verify_directors_accessible(db, user, [m.director_id for m in payload.members])
+    director_ids = [m.director_id for m in payload.members]
+    if payload.synthesis_director_id is not None:
+        director_ids.append(payload.synthesis_director_id)
+    await _verify_directors_accessible(db, user, director_ids)
     data = payload.model_dump(exclude={"members"})
     board = Board(owner_id=user.oid, **data)
     board.members = _members_from_payload(payload.members)
@@ -102,10 +105,19 @@ async def update_board(
 ) -> Board:
     board = await _get_owned_board(board_id, db, user)
     data = payload.model_dump(exclude_unset=True, exclude={"members"})
+
+    # Validate any director references in the payload before mutating state.
+    new_director_ids: list[uuid.UUID] = []
+    if payload.members is not None:
+        new_director_ids.extend(m.director_id for m in payload.members)
+    if "synthesis_director_id" in data and data["synthesis_director_id"] is not None:
+        new_director_ids.append(data["synthesis_director_id"])
+    if new_director_ids:
+        await _verify_directors_accessible(db, user, new_director_ids)
+
     for field, value in data.items():
         setattr(board, field, value)
     if payload.members is not None:
-        await _verify_directors_accessible(db, user, [m.director_id for m in payload.members])
         board.members.clear()
         await db.flush()
         board.members = _members_from_payload(payload.members)
