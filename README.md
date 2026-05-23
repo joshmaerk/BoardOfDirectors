@@ -1,5 +1,8 @@
 # Personal Board of Directors
 
+[![CI](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/ci.yml/badge.svg)](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/ci.yml)
+[![Security](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/security.yml/badge.svg)](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/security.yml)
+
 Dialogisches Sparring-System mit sechs AI-Personen, das im Terminal eine moderierte Roundtable-Debatte führt und in einer SCQA-Synthese mündet. Lokal lauffähig, Python 3.11+, Anthropic API.
 
 > **Inspiration:** Philipp Klöckner, OMR 2026 ("AI Council Pattern").
@@ -149,14 +152,39 @@ Mit `--memory` werden die letzten Einträge pro Persona aus `./board-archives/.m
 
 ---
 
-## Tests
+## Development
 
 ```bash
 pip install -e ".[dev]"
-pytest -q
+pre-commit install
+
+# Lint + Format + Type-Check (alle drei laufen in CI)
+ruff check .
+ruff format --check .
+python -m mypy conductor
+
+# Tests mit Coverage-Threshold (CI gate: 80%)
+python -m pytest --cov=conductor --cov-report=term-missing --cov-fail-under=80
+
+# Security-Gates (laufen auch in der CI)
+bandit -r conductor -ll
+pip-audit -r requirements.txt
 ```
 
-Sieben Test-Module decken Persona-Loading, Joshua-Profil-Injection, RAG-Whitelist, Archive-Format (Frontmatter, SCQA, Compliance), Memory-FIFO, Debate-Round-Flow (mit Mock-Client), Convergence-Check und Budget-Abort.
+### CI-Pipeline
+
+Zwei GitHub-Actions-Workflows laufen auf jedem Push und Pull-Request:
+
+| Workflow | Jobs |
+|---|---|
+| `ci.yml` | Ruff lint + format check + mypy, Pytest auf Python 3.11/3.12/3.13 Matrix, Coverage-Gate >= 80% |
+| `security.yml` | Bandit (SAST, SARIF-Upload nach Code-Scanning), pip-audit (Dependency-Vulnerabilities), gitleaks (Secret-Scanning); zusätzlich wöchentlich Montag 04:00 UTC |
+
+Dependabot prüft wöchentlich `pip`- und `github-actions`-Updates.
+
+### Tests
+
+Acht Test-Module decken: Persona-Loading + Joshua-Profil-Injection, YAML-Config, RAG-Whitelist, Archive-Format (Frontmatter, SCQA, Compliance), Memory-FIFO, Token-Ledger + Budget-Abort, Debate-Round-Flow (mit Mock-Client) + Convergence-Check + Keyboard-Interrupt, Session-Runner (mit Mock-Client), CLI-Smoke (CliRunner), Streaming-Pane-Modell.
 
 ---
 
