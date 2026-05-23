@@ -5,19 +5,18 @@ import json
 import uuid
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.v1.deps import get_llm_client, get_request_id
+from app.api.v1.deps import get_request_id, get_run_queue
 from app.core.db import SessionLocal, get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models import Board, DirectorMessage, Run, RunStatus
 from app.schemas.run import DirectorMessageOut, RunCreate, RunOut, RunWithMessagesOut
 from app.services import audit
-from app.services.board_runner import BoardRunner
-from app.services.llm.base import LLMClient
+from app.services.queue import RunQueue
 
 router = APIRouter(tags=["runs"])
 
@@ -37,12 +36,17 @@ async def _get_owned_run(run_id: uuid.UUID, db: AsyncSession, user: CurrentUser)
 async def create_run(
     board_id: uuid.UUID,
     payload: RunCreate,
-    background: BackgroundTasks,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
-    llm: LLMClient = Depends(get_llm_client),
+    queue: RunQueue = Depends(get_run_queue),
     request_id: str | None = Depends(get_request_id),
 ) -> Run:
+    # Stamp the authenticated oid onto request.state so the slowapi limiter's
+    # key function can keep buckets per user (default-limit was set globally
+    # in main.py).
+    request.state.user_oid = user.oid
+
     board = await db.get(Board, board_id)
     if board is None or board.is_deleted or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
@@ -71,9 +75,7 @@ async def create_run(
     await db.commit()
     await db.refresh(run)
 
-    runner = BoardRunner(llm)
-    background.add_task(
-        runner.execute,
+    await queue.enqueue_run(
         run.id,
         mode_override=payload.mode_override,
         rounds_override=payload.rounds_override,

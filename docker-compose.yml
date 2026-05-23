@@ -15,13 +15,27 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build: .
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://bod:bod@db:5432/bod
+      REDIS_URL: redis://redis:6379/0
+      RUN_QUEUE_BACKEND: arq
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -31,6 +45,21 @@ services:
     volumes:
       - ./app:/srv/app
       - ./alembic:/srv/alembic
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bod:bod@db:5432/bod
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: arq app.workers.runner_worker.WorkerSettings
+    volumes:
+      - ./app:/srv/app
 
 volumes:
   bod-db:

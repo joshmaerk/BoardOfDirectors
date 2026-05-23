@@ -33,6 +33,8 @@ dependencies = [
     "azure-keyvault-secrets>=4.9",
     "tenacity>=9.0",
     "slowapi>=0.1.9",
+    "arq>=0.26",
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]

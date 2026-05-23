@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     # `@kv:<secret-name>` in env are resolved from the vault on startup.
     azure_key_vault_url: str = ""
 
+    # Run queue backend. "in-process" runs jobs in the API's event loop
+    # (fine for dev/tests/single-replica). "arq" enqueues to Redis so a
+    # separate worker container picks them up — restart-safe and scales.
+    run_queue_backend: str = "in-process"
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Rate limits (per-user, slowapi format, comma-separated).
+    rate_limit_default: str = "120/minute"
+    rate_limit_runs: str = "30/hour"
+
     @field_validator(
         "azure_openai_deployments",
         "azure_ai_foundry_deployments",
