@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.deps import get_request_id
 from app.core.db import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models import Director, Visibility
 from app.schemas.director import DirectorCreate, DirectorOut, DirectorUpdate
+from app.services import audit
 
 router = APIRouter(prefix="/directors", tags=["directors"])
 
@@ -32,9 +34,20 @@ async def create_director(
     payload: DirectorCreate,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> Director:
     director = Director(owner_id=user.oid, **payload.model_dump())
     db.add(director)
+    await db.flush()
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="director.created",
+        resource_type="director",
+        resource_id=director.id,
+        request_id=request_id,
+        meta={"model": director.model, "visibility": str(director.visibility)},
+    )
     await db.commit()
     await db.refresh(director)
     return director
@@ -71,10 +84,21 @@ async def update_director(
     payload: DirectorUpdate,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> Director:
     director = await _get_owned_director(director_id, db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for field, value in changed.items():
         setattr(director, field, value)
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="director.updated",
+        resource_type="director",
+        resource_id=director.id,
+        request_id=request_id,
+        meta={"fields": sorted(changed.keys())},
+    )
     await db.commit()
     await db.refresh(director)
     return director
@@ -85,7 +109,16 @@ async def delete_director(
     director_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> None:
     director = await _get_owned_director(director_id, db, user)
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="director.deleted",
+        resource_type="director",
+        resource_id=director.id,
+        request_id=request_id,
+    )
     await db.delete(director)
     await db.commit()

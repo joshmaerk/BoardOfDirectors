@@ -9,9 +9,11 @@ from app.models.board import BoardMode
 from app.models.message import MessageRole
 from app.models.run import RunStatus
 
+MAX_RUN_INPUT_CHARS = 32_000
+
 
 class RunCreate(BaseModel):
-    input: str = Field(..., min_length=1)
+    input: str = Field(..., min_length=1, max_length=MAX_RUN_INPUT_CHARS)
     mode_override: BoardMode | None = None
     rounds_override: int | None = Field(None, ge=1, le=10)
 

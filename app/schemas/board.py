@@ -7,11 +7,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.board import BoardMode, Visibility
 
+MAX_BOARD_MEMBERS = 12
+MAX_DESCRIPTION_CHARS = 4_000
+MAX_PROMPT_OVERRIDE_CHARS = 16_000
+
 
 class BoardMemberIn(BaseModel):
     director_id: uuid.UUID
     position: int = Field(0, ge=0)
-    prompt_override: str | None = None
+    prompt_override: str | None = Field(None, max_length=MAX_PROMPT_OVERRIDE_CHARS)
 
 
 class BoardMemberOut(BoardMemberIn):
@@ -20,7 +24,7 @@ class BoardMemberOut(BoardMemberIn):
 
 class BoardBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
-    description: str | None = None
+    description: str | None = Field(None, max_length=MAX_DESCRIPTION_CHARS)
     mode: BoardMode = BoardMode.PARALLEL
     rounds: int = Field(1, ge=1, le=10)
     synthesis_director_id: uuid.UUID | None = None
@@ -28,17 +32,17 @@ class BoardBase(BaseModel):
 
 
 class BoardCreate(BoardBase):
-    members: list[BoardMemberIn] = Field(default_factory=list)
+    members: list[BoardMemberIn] = Field(default_factory=list, max_length=MAX_BOARD_MEMBERS)
 
 
 class BoardUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=120)
-    description: str | None = None
+    description: str | None = Field(None, max_length=MAX_DESCRIPTION_CHARS)
     mode: BoardMode | None = None
     rounds: int | None = Field(None, ge=1, le=10)
     synthesis_director_id: uuid.UUID | None = None
     visibility: Visibility | None = None
-    members: list[BoardMemberIn] | None = None
+    members: list[BoardMemberIn] | None = Field(None, max_length=MAX_BOARD_MEMBERS)
 
 
 class BoardOut(BoardBase):

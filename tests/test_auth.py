@@ -77,6 +77,7 @@ async def test_valid_token_passes(auth_settings, signing_keys):
         {
             "iss": auth_settings.issuer,
             "aud": auth_settings.azure_api_audience,
+            "tid": auth_settings.azure_tenant_id,
             "oid": "abc-123",
             "preferred_username": "alice@example.com",
             "exp": 9_999_999_999,

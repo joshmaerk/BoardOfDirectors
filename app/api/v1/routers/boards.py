@@ -7,10 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.v1.deps import get_request_id
 from app.core.db import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models import Board, BoardDirector, Director, Visibility
 from app.schemas.board import BoardCreate, BoardMemberIn, BoardOut, BoardUpdate
+from app.services import audit
 
 router = APIRouter(prefix="/boards", tags=["boards"])
 
@@ -60,6 +62,7 @@ async def create_board(
     payload: BoardCreate,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> Board:
     director_ids = [m.director_id for m in payload.members]
     if payload.synthesis_director_id is not None:
@@ -69,6 +72,20 @@ async def create_board(
     board = Board(owner_id=user.oid, **data)
     board.members = _members_from_payload(payload.members)
     db.add(board)
+    await db.flush()
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="board.created",
+        resource_type="board",
+        resource_id=board.id,
+        request_id=request_id,
+        meta={
+            "mode": str(board.mode),
+            "members": len(payload.members),
+            "synthesis": str(board.synthesis_director_id) if board.synthesis_director_id else None,
+        },
+    )
     await db.commit()
     await db.refresh(board, attribute_names=["members"])
     return board
@@ -102,6 +119,7 @@ async def update_board(
     payload: BoardUpdate,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> Board:
     board = await _get_owned_board(board_id, db, user)
     data = payload.model_dump(exclude_unset=True, exclude={"members"})
@@ -121,6 +139,16 @@ async def update_board(
         board.members.clear()
         await db.flush()
         board.members = _members_from_payload(payload.members)
+    changed_fields = sorted([*data.keys(), *(["members"] if payload.members is not None else [])])
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="board.updated",
+        resource_type="board",
+        resource_id=board.id,
+        request_id=request_id,
+        meta={"fields": changed_fields},
+    )
     await db.commit()
     await db.refresh(board, attribute_names=["members"])
     return board
@@ -131,7 +159,16 @@ async def delete_board(
     board_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> None:
     board = await _get_owned_board(board_id, db, user)
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="board.deleted",
+        resource_type="board",
+        resource_id=board.id,
+        request_id=request_id,
+    )
     await db.delete(board)
     await db.commit()
