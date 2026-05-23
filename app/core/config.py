@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     # Entra
     azure_tenant_id: str = ""
     azure_api_audience: str = ""
+    # Optional allow-list of tenant ids accepted in the JWT `tid` claim,
+    # comma-separated. If empty, `azure_tenant_id` is the only accepted tenant.
+    azure_allowed_tenants: str = ""
+    # Roles required for board.* endpoints, comma-separated. If empty, any
+    # authenticated user passes (helpful for dev tenants without role assignments).
+    required_api_roles: str = ""
 
     # Azure OpenAI
     azure_openai_endpoint: str = ""
@@ -62,6 +68,21 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @staticmethod
+    def _split_csv(value: str) -> list[str]:
+        return [v.strip() for v in value.split(",") if v.strip()]
+
+    @property
+    def accepted_tenants(self) -> list[str]:
+        explicit = self._split_csv(self.azure_allowed_tenants)
+        if explicit:
+            return explicit
+        return [self.azure_tenant_id] if self.azure_tenant_id else []
+
+    @property
+    def required_api_role_names(self) -> list[str]:
+        return self._split_csv(self.required_api_roles)
 
     @property
     def jwks_url(self) -> str:

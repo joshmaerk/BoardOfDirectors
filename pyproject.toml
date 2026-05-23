@@ -30,6 +30,8 @@ dependencies = [
     "sse-starlette>=2.1",
     "azure-identity>=1.19",
     "azure-ai-inference>=1.0.0b6",
+    "tenacity>=9.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

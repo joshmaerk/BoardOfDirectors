@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +14,9 @@ from jose.exceptions import JWTError
 from app.core.config import Settings, get_settings
 
 _JWKS_TTL_SECONDS = 24 * 60 * 60
+# Lower limit on how often we refresh the JWKS on a kid-miss, so a flood of
+# invalid tokens cannot DoS our outbound JWKS endpoint.
+_JWKS_MIN_REFRESH_INTERVAL = 60.0
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -32,7 +36,13 @@ class _JwksCache:
         self._fetched_at: float = 0.0
 
     async def get(self, jwks_url: str, kid: str) -> dict[str, Any] | None:
-        if kid not in self._keys or time.time() - self._fetched_at > _JWKS_TTL_SECONDS:
+        now = time.time()
+        age = now - self._fetched_at
+        if not self._keys or age > _JWKS_TTL_SECONDS:
+            await self._refresh(jwks_url)
+            return self._keys.get(kid)
+        if kid not in self._keys and age > _JWKS_MIN_REFRESH_INTERVAL:
+            # Key rotation: refresh on miss, but rate-limited.
             await self._refresh(jwks_url)
         return self._keys.get(kid)
 
@@ -85,6 +95,15 @@ async def _validate_token(token: str, settings: Settings) -> dict[str, Any]:
             detail=f"Invalid token: {exc}",
         ) from exc
 
+    accepted = settings.accepted_tenants
+    if accepted:
+        tid = claims.get("tid")
+        if tid not in accepted:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token tenant not allowed",
+            )
+
     return claims
 
 
@@ -126,3 +145,27 @@ async def get_current_user(
 
     claims = await _validate_token(credentials.credentials, settings)
     return _claims_to_user(claims)
+
+
+def require_roles(
+    *required: str,
+) -> Callable[..., Coroutine[Any, Any, CurrentUser]]:
+    """Dependency factory: 403 unless the caller carries at least one role."""
+
+    async def _dep(
+        user: CurrentUser = Depends(get_current_user),
+        settings: Settings = Depends(get_settings),
+    ) -> CurrentUser:
+        if settings.auth_dev_bypass:
+            return user
+        expected = set(required) or set(settings.required_api_role_names)
+        if not expected:
+            return user
+        if not expected.intersection(user.roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Required role(s): {sorted(expected)}",
+            )
+        return user
+
+    return _dep

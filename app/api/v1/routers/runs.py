@@ -10,11 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.v1.deps import get_llm_client
+from app.api.v1.deps import get_llm_client, get_request_id
 from app.core.db import SessionLocal, get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models import Board, DirectorMessage, Run, RunStatus
 from app.schemas.run import DirectorMessageOut, RunCreate, RunOut, RunWithMessagesOut
+from app.services import audit
 from app.services.board_runner import BoardRunner
 from app.services.llm.base import LLMClient
 
@@ -40,15 +41,11 @@ async def create_run(
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
     llm: LLMClient = Depends(get_llm_client),
+    request_id: str | None = Depends(get_request_id),
 ) -> Run:
     board = await db.get(Board, board_id)
     if board is None or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
-
-    if payload.mode_override is not None:
-        board.mode = payload.mode_override
-    if payload.rounds_override is not None:
-        board.rounds = payload.rounds_override
 
     run = Run(
         board_id=board.id,
@@ -57,11 +54,30 @@ async def create_run(
         status=RunStatus.PENDING,
     )
     db.add(run)
+    await db.flush()
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="run.started",
+        resource_type="run",
+        resource_id=run.id,
+        request_id=request_id,
+        meta={
+            "board_id": str(board.id),
+            "mode_override": payload.mode_override.value if payload.mode_override else None,
+            "rounds_override": payload.rounds_override,
+        },
+    )
     await db.commit()
     await db.refresh(run)
 
     runner = BoardRunner(llm)
-    background.add_task(runner.execute, run.id)
+    background.add_task(
+        runner.execute,
+        run.id,
+        mode_override=payload.mode_override,
+        rounds_override=payload.rounds_override,
+    )
     return run
 
 
@@ -103,11 +119,20 @@ async def cancel_run(
     run_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
+    request_id: str | None = Depends(get_request_id),
 ) -> Run:
     run = await _get_owned_run(run_id, db, user)
     if run.status in {RunStatus.DONE, RunStatus.FAILED, RunStatus.CANCELLED}:
         return run
     run.status = RunStatus.CANCELLED
+    await audit.record(
+        db,
+        actor_oid=user.oid,
+        action="run.cancelled",
+        resource_type="run",
+        resource_id=run.id,
+        request_id=request_id,
+    )
     await db.commit()
     await db.refresh(run)
     return run
@@ -116,10 +141,13 @@ async def cancel_run(
 @router.get("/runs/{run_id}/stream")
 async def stream_run(
     run_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    await _get_owned_run(run_id, db, user)
+    # Ownership check uses its own short-lived session and is released
+    # immediately — the request-scoped dependency would otherwise keep a
+    # pool connection open for the full SSE lifetime.
+    async with SessionLocal() as ownership_session:
+        await _get_owned_run(run_id, ownership_session, user)
 
     async def event_source() -> AsyncIterator[dict[str, str]]:
         seen: set[uuid.UUID] = set()

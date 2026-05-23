@@ -8,11 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.board import Visibility
 
+MAX_SYSTEM_PROMPT_CHARS = 16_000
+
 
 class DirectorBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
     role: str = Field(..., min_length=1, max_length=120)
-    system_prompt: str = Field(..., min_length=1)
+    system_prompt: str = Field(..., min_length=1, max_length=MAX_SYSTEM_PROMPT_CHARS)
     model: str = Field(..., min_length=1, max_length=64)
     temperature: float = Field(0.7, ge=0.0, le=2.0)
     tools: dict[str, Any] | None = None
@@ -26,7 +28,7 @@ class DirectorCreate(DirectorBase):
 class DirectorUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=120)
     role: str | None = Field(None, min_length=1, max_length=120)
-    system_prompt: str | None = Field(None, min_length=1)
+    system_prompt: str | None = Field(None, min_length=1, max_length=MAX_SYSTEM_PROMPT_CHARS)
     model: str | None = Field(None, min_length=1, max_length=64)
     temperature: float | None = Field(None, ge=0.0, le=2.0)
     tools: dict[str, Any] | None = None

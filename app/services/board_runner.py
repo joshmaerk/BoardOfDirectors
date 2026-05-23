@@ -28,24 +28,42 @@ class BoardRunner:
     def __init__(self, llm: LLMClient) -> None:
         self._llm = llm
 
-    async def execute(self, run_id: uuid.UUID) -> None:
+    async def execute(
+        self,
+        run_id: uuid.UUID,
+        *,
+        mode_override: BoardMode | None = None,
+        rounds_override: int | None = None,
+    ) -> None:
         async with SessionLocal() as session:
             board, run, directors = await self._load(session, run_id)
             if board is None or run is None:
                 log.error("run_load_failed", run_id=str(run_id))
                 return
 
-            run.status = RunStatus.RUNNING
-            run.started_at = datetime.now(UTC)
-            await session.commit()
+            effective_mode = mode_override or board.mode
+            effective_rounds = rounds_override or board.rounds
 
             try:
-                if board.mode == BoardMode.PARALLEL:
+                # Honor a cancel that arrived before we started.
+                if run.status == RunStatus.CANCELLED:
+                    return
+
+                run.status = RunStatus.RUNNING
+                run.started_at = datetime.now(UTC)
+                await session.commit()
+
+                if effective_mode == BoardMode.PARALLEL:
                     director_outputs = await self._run_parallel(session, run, board, directors)
-                elif board.mode == BoardMode.SEQUENTIAL:
+                elif effective_mode == BoardMode.SEQUENTIAL:
                     director_outputs = await self._run_sequential(session, run, board, directors)
                 else:
-                    director_outputs = await self._run_discussion(session, run, board, directors)
+                    director_outputs = await self._run_discussion(
+                        session, run, board, directors, rounds=effective_rounds
+                    )
+
+                if await self._is_cancelled(session, run):
+                    return
 
                 synthesis = await self._maybe_synthesize(session, run, board, director_outputs)
                 run.result_summary = synthesis or self._fallback_summary(director_outputs)
@@ -82,6 +100,14 @@ class BoardRunner:
             if m.director_id in by_id
         ]
         return board, run, ordered
+
+    @staticmethod
+    async def _is_cancelled(session: AsyncSession, run: Run) -> bool:
+        # Re-read the status column from the DB so a concurrent /cancel call
+        # that flipped the row is visible. Returning True lets the caller bail
+        # out of the run without overwriting `status`.
+        await session.refresh(run, attribute_names=["status"])
+        return run.status == RunStatus.CANCELLED
 
     async def _run_parallel(
         self,
@@ -150,9 +176,11 @@ class BoardRunner:
         run: Run,
         board: Board,
         directors: list[Director],
+        *,
+        rounds: int,
     ) -> list[tuple[Director, str]]:
         history: list[tuple[Director, str]] = []
-        for round_idx in range(board.rounds):
+        for round_idx in range(rounds):
             transcript = self._format_transcript(history) if history else ""
 
             async def call(
