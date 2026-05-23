@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.venv/
+venv/
+.env
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+
+# Project-specific
+board-archives/
+config.yaml
+
+# OS
+.DS_Store
+Thumbs.db
