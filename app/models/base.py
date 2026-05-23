@@ -31,3 +31,22 @@ class TimestampMixin:
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class SoftDeleteMixin:
+    """Adds a `deleted_at` column. Queries must opt-in by filtering on it.
+
+    Soft-delete is a DSGVO-relevant trade-off: it keeps audit trails and
+    referential integrity but means a delete does not actually remove
+    personal data. For DSGVO right-to-be-forgotten we expose a separate
+    `DELETE /me` endpoint that hard-deletes.
+    """
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None

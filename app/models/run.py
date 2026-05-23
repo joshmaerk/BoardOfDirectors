@@ -8,7 +8,7 @@ from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class RunStatus(enum.StrEnum):
@@ -19,7 +19,7 @@ class RunStatus(enum.StrEnum):
     CANCELLED = "cancelled"
 
 
-class Run(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Run(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "runs"
     __table_args__ = (
         Index("ix_runs_owner_id", "owner_id"),

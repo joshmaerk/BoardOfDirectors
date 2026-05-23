@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -22,9 +23,9 @@ async def list_directors(
     user: CurrentUser = Depends(get_current_user),
 ) -> list[Director]:
     result = await db.scalars(
-        select(Director).where(
-            (Director.owner_id == user.oid) | (Director.visibility == Visibility.SHARED)
-        )
+        select(Director)
+        .where(Director.deleted_at.is_(None))
+        .where((Director.owner_id == user.oid) | (Director.visibility == Visibility.SHARED))
     )
     return list(result)
 
@@ -59,7 +60,7 @@ async def _get_owned_director(
     user: CurrentUser,
 ) -> Director:
     director = await db.get(Director, director_id)
-    if director is None or director.owner_id != user.oid:
+    if director is None or director.is_deleted or director.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Director not found")
     return director
 
@@ -71,7 +72,7 @@ async def get_director(
     user: CurrentUser = Depends(get_current_user),
 ) -> Director:
     director = await db.get(Director, director_id)
-    if director is None:
+    if director is None or director.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Director not found")
     if director.owner_id != user.oid and director.visibility != Visibility.SHARED:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Director not found")
@@ -112,6 +113,7 @@ async def delete_director(
     request_id: str | None = Depends(get_request_id),
 ) -> None:
     director = await _get_owned_director(director_id, db, user)
+    director.deleted_at = datetime.now(UTC)
     await audit.record(
         db,
         actor_oid=user.oid,
@@ -120,5 +122,4 @@ async def delete_director(
         resource_id=director.id,
         request_id=request_id,
     )
-    await db.delete(director)
     await db.commit()

@@ -24,7 +24,7 @@ router = APIRouter(tags=["runs"])
 
 async def _get_owned_run(run_id: uuid.UUID, db: AsyncSession, user: CurrentUser) -> Run:
     run = await db.get(Run, run_id)
-    if run is None or run.owner_id != user.oid:
+    if run is None or run.is_deleted or run.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
     return run
 
@@ -44,7 +44,7 @@ async def create_run(
     request_id: str | None = Depends(get_request_id),
 ) -> Run:
     board = await db.get(Board, board_id)
-    if board is None or board.owner_id != user.oid:
+    if board is None or board.is_deleted or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
 
     run = Run(

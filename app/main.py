@@ -10,26 +10,35 @@ from app.api.v1 import api_v1_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import CorrelationIdMiddleware, SecurityHeadersMiddleware
+from app.core.secrets import hydrate_env_from_key_vault
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
+    resolved = hydrate_env_from_key_vault(settings.azure_key_vault_url)
     get_logger(__name__).info(
         "startup",
         allowed_origins=settings.allowed_origins,
         auth_dev_bypass=settings.auth_dev_bypass,
+        key_vault_secrets_resolved=resolved,
     )
     yield
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # `/docs`, `/redoc`, `/openapi.json` are hidden when EXPOSE_OPENAPI_DOCS=false.
+    docs_kwargs: dict = {}
+    if not settings.expose_openapi_docs:
+        docs_kwargs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
     app = FastAPI(
         title="Board of Directors API",
         version="0.1.0",
         lifespan=lifespan,
+        **docs_kwargs,
     )
     app.add_middleware(
         CORSMiddleware,

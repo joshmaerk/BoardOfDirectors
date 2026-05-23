@@ -4,11 +4,11 @@ from sqlalchemy import JSON, Float, Index, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.board import Visibility
 
 
-class Director(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Director(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "directors"
     __table_args__ = (Index("ix_directors_owner_id", "owner_id"),)
 
