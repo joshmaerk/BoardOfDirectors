@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8501"])
     log_level: str = "INFO"
     auth_dev_bypass: bool = False
+    expose_openapi_docs: bool = True
+
+    # Azure Key Vault (optional). When set, secrets that look like
+    # `@kv:<secret-name>` in env are resolved from the vault on startup.
+    azure_key_vault_url: str = ""
 
     @field_validator(
         "azure_openai_deployments",

@@ -7,7 +7,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class Visibility(enum.StrEnum):
@@ -21,7 +21,7 @@ class BoardMode(enum.StrEnum):
     DISCUSSION = "discussion"
 
 
-class Board(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Board(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "boards"
     __table_args__ = (Index("ix_boards_owner_id", "owner_id"),)
 

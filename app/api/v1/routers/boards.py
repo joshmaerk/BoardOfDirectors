@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -24,7 +25,9 @@ async def _verify_directors_accessible(
 ) -> None:
     if not director_ids:
         return
-    result = await db.scalars(select(Director).where(Director.id.in_(director_ids)))
+    result = await db.scalars(
+        select(Director).where(Director.id.in_(director_ids)).where(Director.deleted_at.is_(None))
+    )
     by_id = {d.id: d for d in result}
     for did in director_ids:
         d = by_id.get(did)
@@ -52,7 +55,10 @@ async def list_boards(
     user: CurrentUser = Depends(get_current_user),
 ) -> list[Board]:
     result = await db.scalars(
-        select(Board).options(selectinload(Board.members)).where(Board.owner_id == user.oid)
+        select(Board)
+        .options(selectinload(Board.members))
+        .where(Board.owner_id == user.oid)
+        .where(Board.deleted_at.is_(None))
     )
     return list(result)
 
@@ -99,7 +105,7 @@ async def _get_owned_board(
     board = await db.scalar(
         select(Board).options(selectinload(Board.members)).where(Board.id == board_id)
     )
-    if board is None or board.owner_id != user.oid:
+    if board is None or board.is_deleted or board.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
     return board
 
@@ -162,6 +168,7 @@ async def delete_board(
     request_id: str | None = Depends(get_request_id),
 ) -> None:
     board = await _get_owned_board(board_id, db, user)
+    board.deleted_at = datetime.now(UTC)
     await audit.record(
         db,
         actor_oid=user.oid,
@@ -170,5 +177,4 @@ async def delete_board(
         resource_id=board.id,
         request_id=request_id,
     )
-    await db.delete(board)
     await db.commit()
