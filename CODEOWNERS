@@ -1,0 +1,12 @@
+# Code owners for sensitive and agentic-coding-relevant areas
+
+AGENTS.md @joshmaerk
+CLAUDE.md @joshmaerk
+.github/ @joshmaerk
+.claude/ @joshmaerk
+docs/specs/ @joshmaerk
+docs/adr/ @joshmaerk
+infra/ @joshmaerk
+streamlit_app/ @joshmaerk
+app/ @joshmaerk
+conductor/ @joshmaerk
