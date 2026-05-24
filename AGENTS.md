@@ -15,6 +15,50 @@ The implementation must follow the companion files:
 - `docs/specs/customer-experience-streamlit-azure.tasks.md`
 - `docs/specs/customer-experience-streamlit-azure.validation.md`
 
+Claude-specific behavioral guidance is in:
+
+- `CLAUDE.md`
+
+Claude, Claude Code and any agent that can read Claude-style instructions must follow both `AGENTS.md` and `CLAUDE.md`. If there is overlap, follow the stricter instruction.
+
+---
+
+## Agent behavior rules
+
+These behavioral rules apply to all coding agents working in this repository.
+
+### Think before coding
+
+- State assumptions explicitly before implementing non-trivial changes.
+- If multiple interpretations exist, present them instead of choosing silently.
+- If something is unclear, stop, name the uncertainty and ask.
+- If a simpler approach solves the request, prefer it and mention the tradeoff.
+- For multi-step work, state a short plan with verification checks before editing.
+
+### Simplicity first
+
+- Implement the minimum code that solves the requested problem.
+- Do not add speculative features.
+- Do not add abstractions for single-use code.
+- Do not add configurability that was not requested.
+- If a solution becomes unnecessarily large, simplify before finalizing.
+
+### Surgical changes
+
+- Touch only files required for the task.
+- Do not refactor unrelated code.
+- Do not reformat adjacent code unless necessary.
+- Match existing style.
+- Remove only imports, variables, functions or files that your own changes made unused.
+- Mention unrelated dead code in the final response instead of deleting it.
+
+### Goal-driven execution
+
+- Convert broad requests into verifiable goals.
+- Add or update tests for new pure logic.
+- Run relevant validation commands before claiming completion.
+- If validation cannot be run, state exactly why.
+
 ---
 
 ## Non-negotiable constraints
