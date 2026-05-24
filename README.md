@@ -272,3 +272,10 @@ Siehe `.env.example`. Wichtigste Variablen:
 - `ALLOWED_ORIGINS` — kommagetrennte Liste (Streamlit-Origin)
 - `AUTH_DEV_BYPASS` — nur lokal, akzeptiert jeden Request als Fake-User
 
+## Mehr Doku
+
+- [`docs/architecture.md`](docs/architecture.md) — System-Layout, Datenfluss, Provider-Routing.
+- [`docs/runbook.md`](docs/runbook.md) — On-Call: Logs lesen, Worker bouncen, Postgres-Failover, DSGVO-Requests.
+- [`docs/streamlit-integration.md`](docs/streamlit-integration.md) — Code-Beispiel für den Streamlit-Client (Token-Forwarding, SSE-Stream).
+- [`infra/main.bicep`](infra/main.bicep) — Azure IaC für Container Apps + Postgres + Redis + Key Vault + App Insights.
+
