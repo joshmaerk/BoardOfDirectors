@@ -13,9 +13,11 @@ from slowapi.util import get_remote_address
 
 from app.api.v1 import api_v1_router
 from app.core.config import get_settings
+from app.core.db import engine as db_engine
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import CorrelationIdMiddleware, SecurityHeadersMiddleware
 from app.core.secrets import hydrate_env_from_key_vault
+from app.core.telemetry import setup_telemetry
 from app.services.llm import LLMRouter
 from app.services.queue import build_queue
 
@@ -38,6 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     llm = LLMRouter(settings)
     queue = build_queue(settings, llm)
     app.state.run_queue = queue
+
+    setup_telemetry(app, settings, db_engine)
 
     get_logger(__name__).info(
         "startup",

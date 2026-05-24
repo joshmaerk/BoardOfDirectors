@@ -65,6 +65,16 @@ class Settings(BaseSettings):
     rate_limit_default: str = "120/minute"
     rate_limit_runs: str = "30/hour"
 
+    # Observability. When `applicationinsights_connection_string` is set,
+    # OpenTelemetry exports traces/metrics to Azure Monitor; otherwise the
+    # SDK is configured without an exporter (spans still produced).
+    applicationinsights_connection_string: str = ""
+    otel_service_name: str = "board-of-directors-api"
+
+    # Idempotency-Key TTL in seconds — a duplicate POST /runs within this
+    # window returns the original run instead of creating a new one.
+    idempotency_ttl_seconds: int = 24 * 60 * 60
+
     @field_validator(
         "azure_openai_deployments",
         "azure_ai_foundry_deployments",

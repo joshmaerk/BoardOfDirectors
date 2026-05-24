@@ -113,6 +113,12 @@ def fake_llm() -> FakeLLMClient:
 async def app(session_factory, fake_user, fake_llm):
     fastapi_app = create_app()
 
+    # Reset cross-test state: the in-memory rate limiter buckets persist
+    # for the process lifetime otherwise.
+    from app.services.rate_limit import reset_default_for_tests
+
+    reset_default_for_tests()
+
     # Lifespan doesn't run under httpx ASGITransport by default; install a
     # synchronous test queue so jobs finish before the API response returns.
     # Production uses InProcessQueue (async) or ARQQueue (Redis).
