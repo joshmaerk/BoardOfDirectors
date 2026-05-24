@@ -1,0 +1,25 @@
+# Gitleaks config (extends the default ruleset).
+#
+# The defaults catch a lot, including bare UUIDs that look like API keys.
+# Bicep templates necessarily embed Azure built-in role-definition IDs
+# (KV Secrets User, AcrPull, …), which are public Microsoft constants.
+# Allow-list those so the workflow does not flag well-known role IDs as
+# leaked credentials.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Azure built-in role definition IDs and well-known constants"
+
+# Built-in role IDs we currently reference in infra/modules/*.bicep.
+# Documented under https://learn.microsoft.com/azure/role-based-access-control/built-in-roles
+regexes = [
+  '''4633458b-17de-408a-b874-0445c86b69e6''',  # Key Vault Secrets User
+  '''7f951dda-4ed3-4680-a7ca-43fe172d538d''',  # AcrPull
+]
+
+# Files where these constants legitimately appear.
+paths = [
+  '''infra/modules/.+\.bicep''',
+]
