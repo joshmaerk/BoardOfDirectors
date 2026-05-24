@@ -11,12 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.v1.deps import get_request_id, get_run_queue
+from app.core.config import Settings, get_settings
 from app.core.db import SessionLocal, get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models import Board, DirectorMessage, Run, RunStatus
 from app.schemas.run import DirectorMessageOut, RunCreate, RunOut, RunWithMessagesOut
-from app.services import audit
+from app.services import audit, idempotency
 from app.services.queue import RunQueue
+from app.services.rate_limit import RateLimiter, get_rate_limiter
+
+IDEMPOTENCY_HEADER = "Idempotency-Key"
 
 router = APIRouter(tags=["runs"])
 
@@ -41,11 +45,27 @@ async def create_run(
     user: CurrentUser = Depends(get_current_user),
     queue: RunQueue = Depends(get_run_queue),
     request_id: str | None = Depends(get_request_id),
+    settings: Settings = Depends(get_settings),
+    limiter: RateLimiter = Depends(get_rate_limiter),
 ) -> Run:
-    # Stamp the authenticated oid onto request.state so the slowapi limiter's
-    # key function can keep buckets per user (default-limit was set globally
-    # in main.py).
     request.state.user_oid = user.oid
+
+    # Per-user, per-route rate limit (independent of the global default).
+    if settings.rate_limit_runs and not limiter.check(f"runs:{user.oid}", settings.rate_limit_runs):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded: {settings.rate_limit_runs}",
+        )
+
+    # Idempotency: if the client retries with the same key, return the run
+    # we created the first time around. Same-user scope.
+    idemp_key = idempotency.normalize(request.headers.get(IDEMPOTENCY_HEADER))
+    if idemp_key:
+        existing_id = await idempotency.find_run_id(db, user.oid, idemp_key)
+        if existing_id is not None:
+            existing = await db.get(Run, existing_id)
+            if existing is not None and not existing.is_deleted:
+                return existing
 
     board = await db.get(Board, board_id)
     if board is None or board.is_deleted or board.owner_id != user.oid:
@@ -70,8 +90,11 @@ async def create_run(
             "board_id": str(board.id),
             "mode_override": payload.mode_override.value if payload.mode_override else None,
             "rounds_override": payload.rounds_override,
+            "idempotency_key": idemp_key,
         },
     )
+    if idemp_key:
+        await idempotency.record(db, user.oid, idemp_key, run.id, settings.idempotency_ttl_seconds)
     await db.commit()
     await db.refresh(run)
 
