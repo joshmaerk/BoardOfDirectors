@@ -4,7 +4,7 @@ Behavioral guidelines for Claude and Claude Code when working in this repository
 
 These guidelines reduce common LLM coding mistakes. They are intentionally biased toward caution over speed. For trivial tasks, use judgment.
 
-Project-specific instructions are in `AGENTS.md`. When instructions conflict, follow the stricter instruction and preserve the repository constraints.
+Project-specific instructions are in `AGENTS.md`. Agentic coding toolchain guidance is in `docs/specs/agentic-coding-toolchain.md`. When instructions conflict, follow the stricter instruction and preserve the repository constraints.
 
 ---
 
@@ -95,7 +95,21 @@ Do not claim completion without running the relevant validation commands or expl
 
 ---
 
-## 5. Repository-specific behavior
+## 5. Agentic coding toolchain
+
+Follow `docs/specs/agentic-coding-toolchain.md`.
+
+For Claude Code work:
+
+- Use the referenced `rtk-ai/rtk` tooling when it is available to reduce noisy command output.
+- Use the referenced `JuliusBrussee/caveman` style when it is available to keep coding communication concise.
+- Missing tooling is not a blocker.
+- Do not install external tooling unless the environment or user explicitly permits it.
+- State in the final response whether the optimized toolchain was available or used.
+
+---
+
+## 6. Repository-specific behavior
 
 Follow `AGENTS.md` for repository-wide constraints. Especially:
 
@@ -110,7 +124,7 @@ Follow `AGENTS.md` for repository-wide constraints. Especially:
 
 ---
 
-## 6. These guidelines are working if
+## 7. These guidelines are working if
 
 - Diffs are smaller and easier to review.
 - There are fewer unnecessary rewrites.
