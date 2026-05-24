@@ -15,6 +15,10 @@ The implementation must follow the companion files:
 - `docs/specs/customer-experience-streamlit-azure.tasks.md`
 - `docs/specs/customer-experience-streamlit-azure.validation.md`
 
+The agentic coding toolchain policy is in:
+
+- `docs/specs/agentic-coding-toolchain.md`
+
 Claude-specific behavioral guidance is in:
 
 - `CLAUDE.md`
@@ -167,6 +171,7 @@ When done, summarize:
 
 1. Files created or changed.
 2. Features implemented.
-3. Validation commands run and their results.
-4. Known limitations.
-5. Remaining TODOs.
+3. Whether the agentic coding toolchain was available or used.
+4. Validation commands run and their results.
+5. Known limitations.
+6. Remaining TODOs.
