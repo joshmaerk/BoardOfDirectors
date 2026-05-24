@@ -1,0 +1,139 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'alembic/**'
+      - 'conductor/**'
+      - 'pyproject.toml'
+      - 'Dockerfile'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options: [dev, staging, prod]
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC federated credentials
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'prod' }}
+  cancel-in-progress: false # never abort a half-done rollout
+
+jobs:
+  deploy:
+    name: Build, push and promote
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'prod' }}
+
+    env:
+      AZURE_CLIENT_ID:       ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID:       ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      RESOURCE_GROUP:        ${{ vars.AZURE_RESOURCE_GROUP }}
+      ENVIRONMENT:           ${{ inputs.environment || 'prod' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Azure (OIDC, no long-lived secrets)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read infra outputs (ACR + app names)
+        id: outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUTS=$(az deployment group show \
+            -g "$RESOURCE_GROUP" \
+            -n main \
+            --query properties.outputs -o json)
+          {
+            echo "acr_name=$(echo "$OUTPUTS" | jq -r .acrName.value)"
+            echo "acr_login_server=$(echo "$OUTPUTS" | jq -r .acrLoginServer.value)"
+            echo "api_app=$(echo "$OUTPUTS"  | jq -r .apiAppName.value)"
+            echo "worker_app=$(echo "$OUTPUTS" | jq -r .workerAppName.value)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push container image
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          az acr build \
+            -r "${{ steps.outputs.outputs.acr_name }}" \
+            -t "bod:${IMAGE_TAG}" \
+            -t "bod:latest" \
+            -f Dockerfile .
+
+      # Migrations run as a one-shot Container Apps Job tied to the same image.
+      # See infra/jobs/migrate.bicep (follow-up); for now we shell into the
+      # api app and execute alembic on the most recent revision.
+      - name: Run database migrations
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          ACR: ${{ steps.outputs.outputs.acr_login_server }}
+        run: |
+          set -euo pipefail
+          az containerapp job create \
+            -g "$RESOURCE_GROUP" \
+            -n "${{ steps.outputs.outputs.api_app }}-migrate-${IMAGE_TAG:0:7}" \
+            --environment "$(az containerapp show -g "$RESOURCE_GROUP" -n "${{ steps.outputs.outputs.api_app }}" --query properties.managedEnvironmentId -o tsv)" \
+            --image "${ACR}/bod:${IMAGE_TAG}" \
+            --trigger-type Manual \
+            --replica-timeout 600 \
+            --replica-retry-limit 1 \
+            --command "alembic" \
+            --args "upgrade,head" \
+            --registry-server "$ACR" \
+            --registry-identity system \
+            --mi-system-assigned >/dev/null || true
+          az containerapp job start \
+            -g "$RESOURCE_GROUP" \
+            -n "${{ steps.outputs.outputs.api_app }}-migrate-${IMAGE_TAG:0:7}"
+
+      - name: Promote new revision (api + worker)
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          ACR: ${{ steps.outputs.outputs.acr_login_server }}
+        run: |
+          set -euo pipefail
+          for app in "${{ steps.outputs.outputs.api_app }}" "${{ steps.outputs.outputs.worker_app }}"; do
+            az containerapp update \
+              -g "$RESOURCE_GROUP" \
+              -n "$app" \
+              --image "${ACR}/bod:${IMAGE_TAG}"
+          done
+
+      - name: Smoke test /healthz
+        shell: bash
+        run: |
+          set -euo pipefail
+          FQDN=$(az containerapp show \
+            -g "$RESOURCE_GROUP" \
+            -n "${{ steps.outputs.outputs.api_app }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 30); do
+            if curl -fsSL "https://${FQDN}/api/v1/healthz" >/dev/null; then
+              echo "✓ /healthz OK after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "✗ /healthz never responded"
+          exit 1
