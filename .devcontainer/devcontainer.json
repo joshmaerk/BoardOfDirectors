@@ -1,0 +1,20 @@
+{
+  "name": "BoardOfDirectors",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "postCreateCommand": "python -m pip install --upgrade pip && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi && if [ -f streamlit_app/requirements.txt ]; then pip install -r streamlit_app/requirements.txt; fi",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "GitHub.copilot"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "APP_ENV": "devcontainer"
+  }
+}
