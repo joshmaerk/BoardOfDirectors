@@ -1,0 +1,68 @@
+name: Agent Task
+description: Coding-agent-ready implementation task
+title: "[Agent Task] "
+labels: ["agent-task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be implemented?
+      placeholder: Implement Task X from docs/specs/customer-experience-streamlit-azure.tasks.md
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Files, modules or directories that may be changed.
+    validations:
+      required: true
+  - type: textarea
+    id: non_scope
+    attributes:
+      label: Non-scope
+      description: What must not be changed?
+    validations:
+      required: false
+  - type: textarea
+    id: specs
+    attributes:
+      label: Relevant specs
+      description: List relevant spec files and sections.
+      value: |
+        - AGENTS.md
+        - CLAUDE.md
+        - docs/specs/customer-experience-streamlit-azure.tasks.md
+        - docs/specs/customer-experience-streamlit-azure.validation.md
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Concrete, verifiable acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation commands
+      description: Commands the agent should run before completion.
+      value: |
+        python -m compileall streamlit_app
+        python -m pytest streamlit_app/tests
+        ruff check streamlit_app
+    validations:
+      required: true
+  - type: dropdown
+    id: data_sensitivity
+    attributes:
+      label: Data sensitivity
+      options:
+        - No sensitive data
+        - Internal only
+        - Potentially confidential
+        - Security/privacy relevant
+    validations:
+      required: true
