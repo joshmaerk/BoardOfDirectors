@@ -58,17 +58,18 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 
 
 class WorkerSettings:
-    """Picked up by `arq app.workers.runner_worker.WorkerSettings`."""
+    """Picked up by `arq app.workers.runner_worker.WorkerSettings`.
 
-    # ARQ inspects these attributes; mutable defaults are intentional and
-    # safe because WorkerSettings is never instantiated.
+    ARQ reads attributes off `settings_cls.__dict__` (see arq.worker.get_kwargs),
+    so `redis_settings` must be a `RedisSettings` instance — not a method.
+    `get_settings()` is `lru_cache`d, so resolving at class-definition time is
+    cheap and safe.
+    """
+
     functions: ClassVar[list] = [(RUN_JOB_NAME, run_board)]
     on_startup = startup
     on_shutdown = shutdown
-
-    @staticmethod
-    def redis_settings():
-        return parse_redis_settings(get_settings().redis_url)
+    redis_settings = parse_redis_settings(get_settings().redis_url)
 
 
 # ARQ inspects functions via name lookup; let it find them on the class too.
