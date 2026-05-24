@@ -113,6 +113,22 @@ def fake_llm() -> FakeLLMClient:
 async def app(session_factory, fake_user, fake_llm):
     fastapi_app = create_app()
 
+    # Lifespan doesn't run under httpx ASGITransport by default; install a
+    # synchronous test queue so jobs finish before the API response returns.
+    # Production uses InProcessQueue (async) or ARQQueue (Redis).
+    from app.services.board_runner import BoardRunner
+
+    class _SyncTestQueue:
+        async def enqueue_run(self, run_id, *, mode_override=None, rounds_override=None):
+            await BoardRunner(fake_llm).execute(
+                run_id, mode_override=mode_override, rounds_override=rounds_override
+            )
+
+        async def close(self):
+            pass
+
+    fastapi_app.state.run_queue = _SyncTestQueue()
+
     async def override_db() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
             yield session
