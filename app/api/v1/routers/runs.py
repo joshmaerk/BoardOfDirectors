@@ -5,7 +5,7 @@ import json
 import uuid
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -30,6 +30,23 @@ async def _get_owned_run(run_id: uuid.UUID, db: AsyncSession, user: CurrentUser)
     if run is None or run.is_deleted or run.owner_id != user.oid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
     return run
+
+
+@router.get("/runs", response_model=list[RunOut])
+async def list_runs(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(get_current_user),
+) -> list[Run]:
+    result = await db.scalars(
+        select(Run)
+        .where(Run.owner_id == user.oid, Run.deleted_at.is_(None))
+        .order_by(Run.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result)
 
 
 @router.post(
