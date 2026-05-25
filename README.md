@@ -279,3 +279,52 @@ Siehe `.env.example`. Wichtigste Variablen:
 - [`docs/streamlit-integration.md`](docs/streamlit-integration.md) — Code-Beispiel für den Streamlit-Client (Token-Forwarding, SSE-Stream).
 - [`infra/main.bicep`](infra/main.bicep) — Azure IaC für Container Apps + Postgres + Redis + Key Vault + App Insights.
 
+---
+
+# Streamlit WebUI (`streamlit_app/`)
+
+Die Streamlit-WebUI ermöglicht internen Nutzern geführten Zugang zum Board-of-Directors-System ohne CLI-Kenntnisse.
+
+## Lokaler Mock-Modus (kein Backend erforderlich)
+
+```bash
+pip install -r streamlit_app/requirements.txt
+streamlit run streamlit_app/app.py
+```
+
+Die App startet unter `http://localhost:8501`. Ohne `BOARD_API_BASE_URL` ist der Mock-Modus aktiv – alle Ergebnisse sind synthetische Beispiele.
+
+## Lokaler Backend-Modus
+
+```bash
+export BOARD_API_BASE_URL=http://localhost:8000
+streamlit run streamlit_app/app.py
+```
+
+## Wichtige Umgebungsvariablen
+
+| Variable | Beschreibung |
+|---|---|
+| `BOARD_API_BASE_URL` | URL des FastAPI-Backends. Fehlt sie → Mock-Modus. |
+| `APP_ENV` | Umgebungskennung (`prod`, `staging`, `dev`). |
+| `AUTH_DEV_BYPASS` | `true` für lokale Entwicklung ohne Entra-Auth. |
+| `AZURE_TENANT_ID` | Optional für künftige OAuth-Integration. |
+
+## Docker
+
+```bash
+docker build -f streamlit_app/Dockerfile -t bod-streamlit:latest .
+docker run -p 8501:8501 bod-streamlit:latest
+```
+
+## Azure Deployment
+
+Siehe [`docs/streamlit-azure-deployment.md`](docs/streamlit-azure-deployment.md) für vollständige Deployment-Anleitung inkl. ACR-Push und Bicep-Parametrisierung.
+
+## Bekannte Einschränkungen
+
+- Session-State ist pro Browser-Tab; bei Container-Neustart gehen Wizard-Daten verloren.
+- Run-Historie zeigt nur Runs der aktuellen Sitzung (kein persistenter Backend-Endpunkt).
+- Entra-Login ist im MVP noch nicht implementiert; Bearer-Token muss manuell gesetzt werden.
+- Die optionale Admin-Seite (`06_Admin.py`) ist im MVP nicht enthalten.
+

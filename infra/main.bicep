@@ -213,6 +213,38 @@ module workerApp 'modules/aca_app.bicep' = {
   }
 }
 
+module streamlitApp 'modules/aca_app.bicep' = {
+  name: 'aca-streamlit'
+  params: {
+    name: '${namePrefix}-streamlit-${environment}'
+    location: location
+    tags: tags
+    environmentId: env.outputs.environmentId
+    acrLoginServer: acr.outputs.loginServer
+    image: '${acr.outputs.loginServer}/bod-streamlit:latest'
+    cpu: '0.25'
+    memory: '0.5Gi'
+    minReplicas: 1
+    maxReplicas: 3
+    targetPort: 8501
+    ingressExternal: true
+    keyVaultName: kv.outputs.name
+    keyVaultUri: kv.outputs.uri
+    appInsightsConnectionString: logging.outputs.appInsightsConnectionString
+    envVars: [
+      { name: 'BOARD_API_BASE_URL', value: 'https://${apiApp.outputs.fqdn}' }
+      { name: 'APP_ENV', value: environment }
+      // Optional Entra authentication – set via deployment workflow or Key Vault
+      // { name: 'AZURE_TENANT_ID', value: azureTenantId }
+      // { name: 'AZURE_CLIENT_ID', value: '<streamlit-app-registration-client-id>' }
+      // { name: 'AZURE_API_SCOPE', value: 'api://<api-app-id>/.default' }
+      // { name: 'AUTH_DEV_BYPASS', value: 'false' }
+    ]
+    command: ['streamlit']
+    args: ['run', 'app.py', '--server.port=8501', '--server.address=0.0.0.0']
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Outputs consumed by the deploy workflow
 // ---------------------------------------------------------------------------
@@ -224,6 +256,8 @@ output keyVaultUri string = kv.outputs.uri
 output apiAppName string = apiApp.outputs.name
 output apiAppFqdn string = apiApp.outputs.fqdn
 output workerAppName string = workerApp.outputs.name
+output streamlitAppName string = streamlitApp.outputs.name
+output streamlitAppFqdn string = streamlitApp.outputs.fqdn
 output postgresFqdn string = postgres.outputs.fqdn
 output redisHostname string = redis.outputs.hostname
 output appInsightsConnectionString string = logging.outputs.appInsightsConnectionString

@@ -38,8 +38,42 @@ jobs:
         run: |
           if [ -d streamlit_app ]; then
             python -m compileall streamlit_app
-            if [ -d streamlit_app/tests ]; then python -m pytest streamlit_app/tests; fi
+            if [ -d streamlit_app/tests ]; then
+              python -m pytest streamlit_app/tests --ignore=streamlit_app/tests/e2e -v
+            fi
             ruff check streamlit_app
           else
             echo "streamlit_app not present yet; skipping app validation"
           fi
+
+  e2e:
+    needs: streamlit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r streamlit_app/requirements.txt pytest pytest-playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run E2E tests and capture screenshots
+        run: |
+          python -m pytest streamlit_app/tests/e2e/ -v
+        env:
+          BOARD_API_BASE_URL: ""
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots
+          path: docs/screenshots/
+          retention-days: 30

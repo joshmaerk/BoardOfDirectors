@@ -113,6 +113,9 @@ ignore = [
 "tests/conftest.py" = ["E402", "N802", "N803", "N806"]
 "alembic/env.py" = ["E402"]
 "alembic/versions/*" = ["E402", "UP037"]
+# streamlit_app: German UI copy uses en-dashes (–) as typography, not by mistake
+"streamlit_app/**" = ["RUF001", "RUF002", "N806"]
+"streamlit_app/tests/*" = ["RUF001", "RUF002", "RUF003", "N806", "N802", "N803"]
 
 [tool.ruff.format]
 quote-style = "double"
