@@ -115,7 +115,7 @@ ignore = [
 "alembic/versions/*" = ["E402", "UP037"]
 # streamlit_app: German UI copy uses en-dashes (–) as typography, not by mistake
 "streamlit_app/**" = ["RUF001", "RUF002", "N806"]
-"streamlit_app/tests/*" = ["RUF001", "RUF002", "N806", "N802", "N803"]
+"streamlit_app/tests/*" = ["RUF001", "RUF002", "RUF003", "N806", "N802", "N803"]
 
 [tool.ruff.format]
 quote-style = "double"
