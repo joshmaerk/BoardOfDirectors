@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/ci.yml/badge.svg)](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/ci.yml)
 [![Security](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/security.yml/badge.svg)](https://github.com/joshmaerk/BoardOfDirectors/actions/workflows/security.yml)
+[![Coverage](https://codecov.io/gh/joshmaerk/BoardOfDirectors/graph/badge.svg)](https://codecov.io/gh/joshmaerk/BoardOfDirectors)
 
 Dialogisches Sparring-System mit sechs AI-Personen, das im Terminal eine moderierte Roundtable-Debatte führt und in einer SCQA-Synthese mündet. Lokal lauffähig, Python 3.11+, Anthropic API.
 

@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # Codecov OIDC upload
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -42,6 +43,32 @@ jobs:
       - name: Mypy
         run: python -m mypy conductor app
 
+  pip-audit:
+    name: pip-audit (CVE gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install backend deps and pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" pip-audit
+
+      - name: Audit backend dependencies
+        run: pip-audit --desc
+
+      - name: Audit Streamlit dependencies
+        run: |
+          pip install -r streamlit_app/requirements.txt
+          pip-audit --desc
+
   test:
     name: Test on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -72,9 +99,16 @@ jobs:
             --cov-report=xml \
             --cov-fail-under=80
 
-      - name: Upload coverage XML
+      - name: Upload to Codecov
         if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v7
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload coverage XML as artifact
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
           path: coverage.xml
