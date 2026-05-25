@@ -14,7 +14,7 @@ from app.api.v1.deps import get_request_id, get_run_queue
 from app.core.config import Settings, get_settings
 from app.core.db import SessionLocal, get_db
 from app.core.security import CurrentUser, get_current_user
-from app.models import Board, DirectorMessage, Run, RunStatus
+from app.models import Board, Director, DirectorMessage, Run, RunStatus
 from app.schemas.run import DirectorMessageOut, RunCreate, RunOut, RunWithMessagesOut
 from app.services import audit, idempotency
 from app.services.queue import RunQueue
@@ -209,12 +209,14 @@ async def stream_run(
                     if msg.id in seen:
                         continue
                     seen.add(msg.id)
-                    yield {
-                        "event": "message",
-                        "data": json.dumps(
-                            DirectorMessageOut.model_validate(msg).model_dump(mode="json")
-                        ),
-                    }
+                    director = (
+                        await session.get(Director, msg.director_id)
+                        if msg.director_id
+                        else None
+                    )
+                    out = DirectorMessageOut.model_validate(msg).model_dump(mode="json")
+                    out["persona_name"] = director.name if director else None
+                    yield {"event": "message", "data": json.dumps(out)}
                 if run.status in terminal:
                     yield {
                         "event": "status",

@@ -2,6 +2,12 @@ import os
 import time
 from collections.abc import Generator
 
+_ROLE_LABELS = {"synthesis": "Moderator", "director": "Direktor"}
+
+
+def _role_label(role: str) -> str:
+    return _ROLE_LABELS.get(role, role or "Unbekannt")
+
 
 class BoardApiError(Exception):
     pass
@@ -185,7 +191,7 @@ class BoardApiClient:
         return result if isinstance(result, list) else []
 
     def start_run(self, board_id: str, question: str, **overrides) -> dict:
-        payload = {"question": question, **overrides}
+        payload = {"input": question, **overrides}
         data = self._post(f"/api/v1/boards/{board_id}/runs", payload)
         return {
             "id": str(data.get("id", "")),
@@ -201,7 +207,7 @@ class BoardApiClient:
         messages_raw = self._get(f"/api/v1/runs/{run_id}/messages")
         messages = [
             {
-                "role": m.get("director_name", m.get("role", "Unbekannt")),
+                "role": m.get("persona_name") or _role_label(m.get("role", "")),
                 "round": m.get("round", ""),
                 "content": m.get("content", ""),
             }
@@ -210,8 +216,8 @@ class BoardApiClient:
         return {
             "id": str(data.get("id", run_id)),
             "status": data.get("status", "unknown"),
-            "question": data.get("question", ""),
-            "synthesis": data.get("synthesis", ""),
+            "question": data.get("input", ""),
+            "synthesis": data.get("result_summary") or "",
             "messages": messages,
             "error": data.get("error"),
         }
@@ -234,23 +240,35 @@ class BoardApiClient:
 
         import json
 
+        current_event = "message"
         for raw_line in resp.iter_lines():
             if not raw_line:
+                current_event = "message"
                 continue
             line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
-            if line.startswith("data:"):
-                payload_str = line[5:].strip()
-                if payload_str in ("[DONE]", ""):
-                    break
-                try:
-                    event = json.loads(payload_str)
-                    yield {
-                        "role": event.get("director_name", event.get("role", "Unbekannt")),
-                        "round": event.get("round", ""),
-                        "content": event.get("content", ""),
-                    }
-                except json.JSONDecodeError:
-                    continue
+            if line.startswith("event:"):
+                current_event = line[6:].strip()
+                continue
+            if not line.startswith("data:"):
+                continue
+            payload_str = line[5:].strip()
+            if not payload_str:
+                continue
+            if payload_str == "[DONE]":
+                break
+            if current_event == "error":
+                raise BoardApiError(f"Stream-Fehler: {payload_str}")
+            if current_event == "status":
+                break
+            try:
+                event = json.loads(payload_str)
+                yield {
+                    "role": event.get("persona_name") or _role_label(event.get("role", "")),
+                    "round": event.get("round", ""),
+                    "content": event.get("content", ""),
+                }
+            except json.JSONDecodeError:
+                continue
 
     def list_runs(self) -> list[dict]:
         result = self._get("/api/v1/runs")

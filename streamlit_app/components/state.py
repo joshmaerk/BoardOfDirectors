@@ -1,4 +1,5 @@
 import streamlit as st
+from components.api_client import is_mock_mode
 
 DEFAULT_STATE: dict = {
     "wizard_step": 1,
@@ -20,6 +21,7 @@ def init_session_state() -> None:
     for key, default in DEFAULT_STATE.items():
         if key not in st.session_state:
             st.session_state[key] = default
+    st.session_state["mock_mode"] = is_mock_mode()
 
 
 def reset_wizard() -> None:
