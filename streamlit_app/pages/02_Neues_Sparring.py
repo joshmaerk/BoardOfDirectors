@@ -1,5 +1,5 @@
 import streamlit as st
-from components.api_client import get_api_client, is_mock_mode
+from components.api_client import BoardApiError, get_api_client, is_mock_mode
 from components.prompt_coach import build_prompt
 from components.renderers import build_markdown_export
 from components.safety import assess_safety
@@ -259,19 +259,28 @@ elif step == 6:
     if current_run is None:
         client = get_api_client()
         prompt = (st.session_state.get("prompt_draft") or {}).get("prompt", "")
-        run = client.start_run(
-            board_id=st.session_state.get("selected_board", "management_board"),
-            question=prompt,
-        )
-        st.session_state["current_run"] = run
+        try:
+            run = client.start_run(
+                board_id=st.session_state.get("selected_board", "management_board"),
+                question=prompt,
+            )
+            st.session_state["current_run"] = run
 
-        with st.spinner("Board of Directors tagt …"):
-            messages = []
-            for msg in client.stream_messages(run["id"]):
-                messages.append(msg)
-                st.session_state["run_messages"] = messages
+            with st.spinner("Board of Directors tagt …"):
+                messages = []
+                for msg in client.stream_messages(run["id"]):
+                    messages.append(msg)
+                    st.session_state["run_messages"] = messages
 
-        finished = client.get_run(run["id"])
+            finished = client.get_run(run["id"])
+        except BoardApiError as e:
+            st.error(f"❌ Fehler bei der Ausführung: {e}")
+            if st.button("← Zurück zu Schritt 5"):
+                st.session_state["wizard_step"] = 5
+                st.session_state["current_run"] = None
+                st.rerun()
+            st.stop()
+
         st.session_state["current_run"] = finished
         current_run = finished
 
