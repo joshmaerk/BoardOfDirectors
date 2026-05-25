@@ -210,9 +210,7 @@ async def stream_run(
                         continue
                     seen.add(msg.id)
                     director = (
-                        await session.get(Director, msg.director_id)
-                        if msg.director_id
-                        else None
+                        await session.get(Director, msg.director_id) if msg.director_id else None
                     )
                     out = DirectorMessageOut.model_validate(msg).model_dump(mode="json")
                     out["persona_name"] = director.name if director else None
