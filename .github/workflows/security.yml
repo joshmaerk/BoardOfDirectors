@@ -50,8 +50,8 @@ jobs:
           sarif_file: bandit.sarif
           category: bandit
 
-  pip-audit:
-    name: pip-audit (Dependency Vulnerabilities)
+  pip-audit-backend:
+    name: pip-audit (Backend)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -63,13 +63,52 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install pip-audit
+      - name: Install dependencies and pip-audit
         run: |
           python -m pip install --upgrade pip
-          pip install pip-audit
+          pip install -e ".[dev]" pip-audit cyclonedx-bom
 
-      - name: Audit runtime dependencies
-        run: pip-audit -r requirements.txt
+      - name: Audit installed environment (pyproject.toml)
+        run: pip-audit --desc
+
+      - name: Generate SBOM (CycloneDX)
+        run: cyclonedx-py environment -o sbom-backend.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-backend
+          path: sbom-backend.json
+          retention-days: 90
+
+  pip-audit-streamlit:
+    name: pip-audit (Streamlit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Streamlit dependencies and pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r streamlit_app/requirements.txt pip-audit cyclonedx-bom
+
+      - name: Audit Streamlit deps
+        run: pip-audit --desc
+
+      - name: Generate SBOM (CycloneDX)
+        run: cyclonedx-py environment -o sbom-streamlit.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-streamlit
+          path: sbom-streamlit.json
+          retention-days: 90
 
   gitleaks:
     name: Gitleaks (Secret Scanning)

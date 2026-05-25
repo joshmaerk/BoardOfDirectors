@@ -17,6 +17,26 @@ on:
       - "CLAUDE.md"
 
 jobs:
+  pip-audit:
+    name: pip-audit (CVE gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies and pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r streamlit_app/requirements.txt pip-audit
+
+      - name: Audit Streamlit dependencies
+        run: pip-audit --desc
+
   streamlit:
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +67,7 @@ jobs:
           fi
 
   e2e:
-    needs: streamlit
+    needs: [pip-audit, streamlit]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

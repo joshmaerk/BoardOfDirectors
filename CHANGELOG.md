@@ -5,6 +5,24 @@ Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.0.0
 
 ---
 
+## [Unveröffentlicht] — PR #18
+
+### Added
+- Neuer Deploy-Workflow für Azure App Service (Linux, Python, kein Container) mit Publish-Profile-Auth
+- pip-audit als paralleler CVE-Gate-Job in `ci.yml`, `streamlit-ci.yml` und `security.yml`
+- SBOM-Generierung (CycloneDX) in `security.yml` für Backend und Streamlit, 90 Tage als Artefakt
+- Codecov-Upload in `ci.yml` (Python 3.11) für dynamisches Coverage-Badge
+- Coverage-Badge in `README.md` via Codecov
+
+### Fixed
+- `security.yml` pip-audit scannte nicht-existierende `requirements.txt` im Projektwurzel → jetzt gegen installierte Umgebung aus `pyproject.toml` und `streamlit_app/requirements.txt`
+- `ci.yml` `upload-artifact@v7` existiert nicht → auf `@v4` korrigiert
+
+### Changed
+- `docs/streamlit-azure-deployment.md` um App-Service-Abschnitt mit Setup-Befehlen erweitert
+
+---
+
 ## [Unveröffentlicht] — PR #17
 
 ### Fixed

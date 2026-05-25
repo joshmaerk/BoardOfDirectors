@@ -1,0 +1,107 @@
+name: Deploy Streamlit → Azure App Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "streamlit_app/**"
+      - ".github/workflows/deploy-appservice.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment-Umgebung"
+        type: choice
+        options: [production, staging]
+        default: production
+
+concurrency:
+  group: deploy-appservice-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false   # kein paralleles Deployment
+
+permissions:
+  contents: read
+
+jobs:
+  # ─── Security-Gate: schlägt bei bekannter CVE fehl ──────────────────────────
+  security-gate:
+    name: CVE-Gate (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps + pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r streamlit_app/requirements.txt pip-audit
+
+      - name: Audit (schlägt bei CVE fehl)
+        run: pip-audit --desc
+
+  # ─── Deployment ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to App Service (${{ inputs.environment || 'production' }})
+    needs: security-gate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}  # Environment-Protection-Rules
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r streamlit_app/requirements.txt
+
+      # Auth: Publish Profile aus Azure Portal → GitHub Secret AZURE_WEBAPP_PUBLISH_PROFILE
+      # (App Service → Übersicht → Veröffentlichungsprofil herunterladen → Inhalt als Secret einfügen)
+      - name: Deploy via Publish Profile
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: streamlit_app/
+
+      # Startup-Kommando: Streamlit auf Port 8000 (App Service mappt → 80/443)
+      # Einmalig setzen; wird bei jedem Deploy übernommen falls der Wert abweicht
+      - name: Azure Login (OIDC — nur für az-CLI-Befehle nach dem Deploy)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Startup-Kommando und Port setzen
+        run: |
+          az webapp config set \
+            --name "${{ vars.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --startup-file "python -m streamlit run app.py --server.port=8000 --server.address=0.0.0.0 --server.headless=true"
+          az webapp config appsettings set \
+            --name "${{ vars.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --settings WEBSITES_PORT=8000
+
+      # ── Smoke-Test ────────────────────────────────────────────────────────────
+      - name: Smoke-Test (Streamlit Health)
+        run: |
+          url="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/_stcore/health"
+          echo "Smoke-Test: $url"
+          for i in $(seq 1 20); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            if [ "$status" = "200" ]; then
+              echo "✓ Smoke-Test bestanden (Versuch $i)"
+              exit 0
+            fi
+            echo "  Versuch $i: HTTP $status – warte 15 s …"
+            sleep 15
+          done
+          echo "✗ Smoke-Test nach 20 Versuchen fehlgeschlagen"
+          exit 1

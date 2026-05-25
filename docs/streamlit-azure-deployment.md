@@ -1,6 +1,65 @@
 # Streamlit Azure Deployment
 
-Dieses Dokument beschreibt den Betrieb der Streamlit WebUI lokal, als Docker-Container und auf Azure Container Apps.
+Dieses Dokument beschreibt den Betrieb der Streamlit WebUI lokal, als Docker-Container, auf Azure Container Apps und auf Azure App Service (kein Container, Linux, Python 3.11).
+
+---
+
+## Azure App Service (Linux, Python — empfohlen für einfaches Deployment)
+
+### Voraussetzungen
+
+```bash
+# App Service + Service Plan anlegen (einmalig, manuell oder via IaC)
+az appservice plan create \
+  --name bod-streamlit-plan \
+  --resource-group <rg> \
+  --sku B2 \
+  --is-linux
+
+az webapp create \
+  --name <app-name> \
+  --resource-group <rg> \
+  --plan bod-streamlit-plan \
+  --runtime "PYTHON:3.11"
+
+# Port und Startup-Kommando setzen
+az webapp config appsettings set \
+  --name <app-name> --resource-group <rg> \
+  --settings \
+    WEBSITES_PORT=8000 \
+    BOARD_API_BASE_URL=https://<api-backend-fqdn>
+
+az webapp config set \
+  --name <app-name> --resource-group <rg> \
+  --startup-file "python -m streamlit run app.py --server.port=8000 --server.address=0.0.0.0 --server.headless=true"
+```
+
+### CI/CD via GitHub Actions (`.github/workflows/deploy-appservice.yml`)
+
+**Auth: Publish Profile** (einfachster Weg, kein OIDC nötig)
+
+1. Azure Portal → App Service → Übersicht → **Veröffentlichungsprofil herunterladen**
+2. Inhalt der `.PublishSettings`-Datei als GitHub Secret `AZURE_WEBAPP_PUBLISH_PROFILE` speichern
+3. GitHub Variable `AZURE_WEBAPP_NAME` und `AZURE_RESOURCE_GROUP` setzen
+
+Der Workflow deployt automatisch bei jedem Push auf `main` (nur wenn `streamlit_app/**` geändert).
+
+**Benötigte GitHub Secrets/Variables:**
+
+| Name | Typ | Zweck |
+|------|-----|-------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | Secret | Publish-Profile-XML aus Azure Portal |
+| `AZURE_CLIENT_ID` | Secret | OIDC App-ID (nur für `az`-CLI-Schritte nach Deploy) |
+| `AZURE_TENANT_ID` | Secret | Entra Tenant |
+| `AZURE_SUBSCRIPTION_ID` | Secret | Azure Subscription |
+| `AZURE_WEBAPP_NAME` | Variable | App Service Name |
+| `AZURE_RESOURCE_GROUP` | Variable | Resource Group |
+
+### Bekannte Einschränkungen (App Service vs. Container Apps)
+
+- Kein automatisches Scaling auf 0 (mindestens 1 Instanz läuft immer auf B-Tier)
+- Kein Blue/Green-Swap ohne Deployment Slots (S1+ nötig)
+- Startup-Zeit bei Cold Start ~30–60 s (Streamlit lädt beim ersten Request)
 
 ---
 
