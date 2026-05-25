@@ -30,6 +30,7 @@ class DirectorMessageOut(BaseModel):
     completion_tokens: int
     latency_ms: int
     created_at: datetime
+    persona_name: str | None = None
 
 
 class RunOut(BaseModel):

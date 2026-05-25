@@ -243,7 +243,21 @@ elif step == 5:
     with col_next:
         if st.button("🚀 Sparring starten", key="step5_next"):
             st.session_state["selected_board"] = selected_board
-            st.session_state["selected_output_format"] = selected_format
+            if selected_format != st.session_state.get("selected_output_format"):
+                st.session_state["selected_output_format"] = selected_format
+                ctx = st.session_state.get("context_values") or {}
+                draft = build_prompt(
+                    use_case_key=st.session_state["selected_use_case"],
+                    context=ctx,
+                    output_format_key=selected_format,
+                )
+                st.session_state["prompt_draft"] = {
+                    "prompt": draft.prompt,
+                    "quality_hints": draft.quality_hints,
+                    "missing_context_questions": draft.missing_context_questions,
+                }
+            else:
+                st.session_state["selected_output_format"] = selected_format
             st.session_state["wizard_step"] = 6
             st.rerun()
 
@@ -259,6 +273,12 @@ elif step == 6:
     if current_run is None:
         client = get_api_client()
         prompt = (st.session_state.get("prompt_draft") or {}).get("prompt", "")
+        if not prompt.strip():
+            st.error("Kein Prompt vorhanden – bitte zurück zu Schritt 3.")
+            if st.button("← Zurück zu Schritt 3"):
+                st.session_state["wizard_step"] = 3
+                st.rerun()
+            st.stop()
         try:
             run = client.start_run(
                 board_id=st.session_state.get("selected_board", "management_board"),
@@ -290,7 +310,7 @@ elif step == 6:
         st.rerun()
 
     synthesis = current_run.get("synthesis", "")
-    messages = current_run.get("messages", run_messages)
+    messages = current_run.get("messages") or run_messages
 
     if synthesis:
         st.success("**Synthese des Moderators:**")

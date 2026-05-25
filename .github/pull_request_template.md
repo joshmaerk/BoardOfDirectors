@@ -24,6 +24,7 @@ Check all that apply:
 - [ ] `docker build -f streamlit_app/Dockerfile .` if Docker files changed
 - [ ] Backend validation commands if backend code changed
 - [ ] Not run; reason documented below
+- [ ] `CHANGELOG.md` wurde mit PR-Nummer, Datum und nutzerlesbaren Einträgen aktualisiert
 
 ## Agentic setup
 

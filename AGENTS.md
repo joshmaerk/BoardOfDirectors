@@ -109,6 +109,17 @@ Implement in this order unless the user explicitly asks otherwise:
 - Avoid hard-coded absolute local paths.
 - Make mock mode explicit and visible in the UI.
 
+### CHANGELOG-Pflege (verpflichtend)
+
+Nach jedem abgeschlossenen PR **`CHANGELOG.md` im Projektroot aktualisieren**:
+
+1. Den Block `[Unveröffentlicht]` mit PR-Nummer und Datum abschließen oder einen neuen `[Unveröffentlicht]`-Block anlegen.
+2. Sektionen `Added`, `Changed`, `Fixed`, `Removed` verwenden — nur was wirklich zutrifft.
+3. Einträge nutzerfokussiert formulieren: was ändert sich aus Sicht der Anwendung, nicht aus Sicht des Codes.
+4. Ein Satz pro Änderung, keine Absätze.
+
+`CHANGELOG.md` **nie weglassen**, auch bei kleinen Fixes oder reinen Refactorings.
+
 ---
 
 ## Streamlit rules
@@ -175,3 +186,4 @@ When done, summarize:
 4. Validation commands run and their results.
 5. Known limitations.
 6. Remaining TODOs.
+7. CHANGELOG.md: welcher Block wurde hinzugefügt oder aktualisiert?
