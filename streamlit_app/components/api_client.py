@@ -98,6 +98,26 @@ class MockBoardApiClient:
             time.sleep(0.3)
             yield msg
 
+    def list_runs(self) -> list[dict]:
+        return [
+            {
+                "id": "mock_run_001",
+                "status": "done",
+                "question": "Wie können wir unsere Strategie schärfen?",
+                "synthesis": _MOCK_MESSAGES[-1]["content"],
+                "messages": _MOCK_MESSAGES[:-1],
+                "error": None,
+            },
+            {
+                "id": "mock_run_002",
+                "status": "done",
+                "question": "Welche Risiken übersehen wir bei unserem Ansatz?",
+                "synthesis": "**Synthese:** Das Board empfiehlt eine systematische Risikoanalyse mit drei Szenarien.",
+                "messages": [],
+                "error": None,
+            },
+        ]
+
     def cancel_run(self, run_id: str) -> None:
         pass
 
@@ -231,6 +251,20 @@ class BoardApiClient:
                     }
                 except json.JSONDecodeError:
                     continue
+
+    def list_runs(self) -> list[dict]:
+        result = self._get("/api/v1/runs")
+        return [
+            {
+                "id": str(r.get("id", "")),
+                "status": r.get("status", "unknown"),
+                "question": r.get("input", ""),
+                "synthesis": r.get("result_summary") or "",
+                "messages": [],
+                "error": r.get("error"),
+            }
+            for r in (result if isinstance(result, list) else [])
+        ]
 
     def cancel_run(self, run_id: str) -> None:
         self._post(f"/api/v1/runs/{run_id}/cancel", {})

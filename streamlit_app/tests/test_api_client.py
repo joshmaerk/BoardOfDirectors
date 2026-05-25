@@ -55,6 +55,29 @@ def test_mock_cancel_run_does_not_raise():
     MockBoardApiClient().cancel_run("any_id")
 
 
+def test_mock_list_runs_returns_multiple():
+    runs = MockBoardApiClient().list_runs()
+    assert len(runs) >= 1
+    assert "id" in runs[0]
+    assert "status" in runs[0]
+    assert "question" in runs[0]
+    assert "synthesis" in runs[0]
+
+
+def test_list_runs_maps_backend_fields():
+    client = BoardApiClient(base_url="http://example.com")
+    fake_response = MagicMock()
+    fake_response.ok = True
+    fake_response.json.return_value = [
+        {"id": "abc-123", "status": "done", "input": "Testfrage", "result_summary": "Synthese X"}
+    ]
+    with patch("requests.get", return_value=fake_response):
+        runs = client.list_runs()
+    assert runs[0]["question"] == "Testfrage"
+    assert runs[0]["synthesis"] == "Synthese X"
+    assert runs[0]["id"] == "abc-123"
+
+
 # ---------------------------------------------------------------------------
 # is_mock_mode / get_api_client factory
 # ---------------------------------------------------------------------------
