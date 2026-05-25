@@ -132,24 +132,106 @@ class BoardApiClient:
                 msg = f"Unbekannter Fehler (HTTP {status_code}). {detail}".strip()
         raise BoardApiError(msg)
 
+    def _get(self, path: str) -> dict | list:
+        import requests
+
+        try:
+            resp = requests.get(f"{self.base_url}{path}", headers=self._headers(), timeout=15)
+        except requests.RequestException as exc:
+            raise BoardApiError(f"Netzwerkfehler: {exc}") from exc
+        if not resp.ok:
+            self._raise_for_status(resp.status_code, resp.text)
+        return resp.json()
+
+    def _post(self, path: str, payload: dict) -> dict:
+        import requests
+
+        try:
+            resp = requests.post(f"{self.base_url}{path}", json=payload, headers=self._headers(), timeout=15)
+        except requests.RequestException as exc:
+            raise BoardApiError(f"Netzwerkfehler: {exc}") from exc
+        if not resp.ok:
+            self._raise_for_status(resp.status_code, resp.text)
+        return resp.json()
+
     def list_directors(self) -> list[dict]:
-        raise NotImplementedError("Implemented in Task 9")
+        result = self._get("/api/v1/directors")
+        return result if isinstance(result, list) else []
 
     def list_boards(self) -> list[dict]:
-        raise NotImplementedError("Implemented in Task 9")
+        result = self._get("/api/v1/boards")
+        return result if isinstance(result, list) else []
 
     def start_run(self, board_id: str, question: str, **overrides) -> dict:
-        raise NotImplementedError("Implemented in Task 9")
+        payload = {"question": question, **overrides}
+        data = self._post(f"/api/v1/boards/{board_id}/runs", payload)
+        return {
+            "id": str(data.get("id", "")),
+            "status": data.get("status", "pending"),
+            "question": question,
+            "synthesis": "",
+            "messages": [],
+            "error": None,
+        }
 
     def get_run(self, run_id: str) -> dict:
-        raise NotImplementedError("Implemented in Task 9")
+        data = self._get(f"/api/v1/runs/{run_id}")
+        messages_raw = self._get(f"/api/v1/runs/{run_id}/messages")
+        messages = [
+            {
+                "role": m.get("director_name", m.get("role", "Unbekannt")),
+                "round": m.get("round", ""),
+                "content": m.get("content", ""),
+            }
+            for m in (messages_raw if isinstance(messages_raw, list) else [])
+        ]
+        return {
+            "id": str(data.get("id", run_id)),
+            "status": data.get("status", "unknown"),
+            "question": data.get("question", ""),
+            "synthesis": data.get("synthesis", ""),
+            "messages": messages,
+            "error": data.get("error"),
+        }
 
     def stream_messages(self, run_id: str) -> Generator[dict, None, None]:
-        raise NotImplementedError("Implemented in Task 9")
-        yield  # make it a generator
+        import requests
+
+        try:
+            resp = requests.get(
+                f"{self.base_url}/api/v1/runs/{run_id}/stream",
+                headers={**self._headers(), "Accept": "text/event-stream"},
+                stream=True,
+                timeout=120,
+            )
+        except requests.RequestException as exc:
+            raise BoardApiError(f"Netzwerkfehler beim Streaming: {exc}") from exc
+
+        if not resp.ok:
+            self._raise_for_status(resp.status_code)
+
+        import json
+
+        for raw_line in resp.iter_lines():
+            if not raw_line:
+                continue
+            line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
+            if line.startswith("data:"):
+                payload_str = line[5:].strip()
+                if payload_str in ("[DONE]", ""):
+                    break
+                try:
+                    event = json.loads(payload_str)
+                    yield {
+                        "role": event.get("director_name", event.get("role", "Unbekannt")),
+                        "round": event.get("round", ""),
+                        "content": event.get("content", ""),
+                    }
+                except json.JSONDecodeError:
+                    continue
 
     def cancel_run(self, run_id: str) -> None:
-        raise NotImplementedError("Implemented in Task 9")
+        self._post(f"/api/v1/runs/{run_id}/cancel", {})
 
 
 def get_api_client(access_token: str | None = None) -> MockBoardApiClient | BoardApiClient:
