@@ -179,12 +179,15 @@ Zwei GitHub-Actions-Workflows laufen auf jedem Push und Pull-Request:
 |---|---|
 | `ci.yml` | Ruff lint + format check + mypy, Pytest auf Python 3.11/3.12/3.13 Matrix, Coverage-Gate >= 80% |
 | `security.yml` | Bandit (SAST, SARIF-Upload nach Code-Scanning), pip-audit (Dependency-Vulnerabilities), gitleaks (Secret-Scanning); zusätzlich wöchentlich Montag 04:00 UTC |
+| `streamlit-ci.yml` | Ruff lint + format check, Pytest Unit-Tests (7 Module), Playwright E2E-Tests (4 Dateien, Chromium), Screenshot-Upload als CI-Artifact |
 
 Dependabot prüft wöchentlich `pip`- und `github-actions`-Updates.
 
 ### Tests
 
 Acht Test-Module decken: Persona-Loading + Joshua-Profil-Injection, YAML-Config, RAG-Whitelist, Archive-Format (Frontmatter, SCQA, Compliance), Memory-FIFO, Token-Ledger + Budget-Abort, Debate-Round-Flow (mit Mock-Client) + Convergence-Check + Keyboard-Interrupt, Session-Runner (mit Mock-Client), CLI-Smoke (CliRunner), Streaming-Pane-Modell.
+
+**Streamlit-App (`streamlit_app/tests/`):** Sieben Unit-Test-Module (auth, api_client, prompt_coach, renderers, safety, state, templates) und vier Playwright-E2E-Module (Start-Seite, Wizard Golden-Path, Safety-Klassifikation Rot/Gelb, Board-Bibliothek + Hilfe). E2E-Tests laufen gegen eine gestartete App im Mock-Modus; Screenshots landen in `docs/screenshots/` und werden als CI-Artifact gespeichert.
 
 ---
 
@@ -285,6 +288,28 @@ Siehe `.env.example`. Wichtigste Variablen:
 
 Die Streamlit-WebUI ermöglicht internen Nutzern geführten Zugang zum Board-of-Directors-System ohne CLI-Kenntnisse.
 
+## Seiten
+
+| Seite | Inhalt |
+|---|---|
+| `01_Start.py` | Willkommensseite, Sicherheitshinweise, 6 Use-Case-Einstiegsbuttons |
+| `02_Neues_Sparring.py` | 6-stufiger Wizard: Use Case → Kontext → Safety-Check → Prompt-Review → Board/Format → Ergebnis + Markdown-Download |
+| `03_Meine_Runs.py` | Run-Verlauf der aktuellen Sitzung |
+| `04_Board_Bibliothek.py` | Übersicht aller Board- und Use-Case-Templates |
+| `05_Hilfe_Leitplanken.py` | Safety-Level-Erläuterungen (Grün/Gelb/Rot) mit Beispielen |
+
+## Komponenten (`streamlit_app/components/`)
+
+| Modul | Aufgabe |
+|---|---|
+| `state.py` | Session-State initialisieren, Wizard-Reset |
+| `safety.py` | Lokale Safety-Klassifikation ohne LLM-Call (Grün/Gelb/Rot) |
+| `prompt_coach.py` | Prompt-Aufbau aus Use-Case-Template und Kontext |
+| `api_client.py` | HTTP-Client gegen FastAPI-Backend + deterministischer `MockBoardApiClient` |
+| `templates.py` | Frozen-Dataclass-Registry für Boards, Use Cases und Output-Formate |
+| `renderers.py` | Markdown-Export-Aufbau für das Ergebnis-Download |
+| `auth.py` | Bearer-Token aus `st.session_state["entra_access_token"]` lesen |
+
 ## Lokaler Mock-Modus (kein Backend erforderlich)
 
 ```bash
@@ -303,12 +328,13 @@ streamlit run streamlit_app/app.py
 
 ## Wichtige Umgebungsvariablen
 
-| Variable | Beschreibung |
-|---|---|
-| `BOARD_API_BASE_URL` | URL des FastAPI-Backends. Fehlt sie → Mock-Modus. |
-| `APP_ENV` | Umgebungskennung (`prod`, `staging`, `dev`). |
-| `AUTH_DEV_BYPASS` | `true` für lokale Entwicklung ohne Entra-Auth. |
-| `AZURE_TENANT_ID` | Optional für künftige OAuth-Integration. |
+| Variable | Pflicht | Beschreibung |
+|---|---|---|
+| `BOARD_API_BASE_URL` | Nein | Backend-URL. Fehlt → Mock-Modus aktiv. |
+| `AUTH_DEV_BYPASS` | Nein | `true` deaktiviert Token-Prüfung lokal. |
+| `AZURE_TENANT_ID` | Nein | Für künftige Entra-OAuth-Integration. |
+| `AZURE_CLIENT_ID` | Nein | App-Registration-Client-ID für OAuth. |
+| `AZURE_API_SCOPE` | Nein | API-Scope für Bearer-Token-Anforderung. |
 
 ## Docker
 
@@ -323,8 +349,8 @@ Siehe [`docs/streamlit-azure-deployment.md`](docs/streamlit-azure-deployment.md)
 
 ## Bekannte Einschränkungen
 
-- Session-State ist pro Browser-Tab; bei Container-Neustart gehen Wizard-Daten verloren.
-- Run-Historie zeigt nur Runs der aktuellen Sitzung (kein persistenter Backend-Endpunkt).
-- Entra-Login ist im MVP noch nicht implementiert; Bearer-Token muss manuell gesetzt werden.
-- Die optionale Admin-Seite (`06_Admin.py`) ist im MVP nicht enthalten.
+- **Session-State**: Pro Browser-Tab. Wizard-Daten gehen bei App-Neustart verloren.
+- **Run-Verlauf**: Nur sitzungslokal (`st.session_state`). Persistenz erfordert einen Backend-Endpunkt (noch nicht implementiert).
+- **Entra-OAuth**: Nicht implementiert. Lokal: `AUTH_DEV_BYPASS=true`. Produktion: Bearer-Token muss extern bereitgestellt werden.
+- **Admin-Seite**: `06_Admin.py` ist nicht implementiert (außerhalb MVP-Scope).
 
