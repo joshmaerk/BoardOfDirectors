@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Generator
+from collections.abc import Generator
 
 
 class BoardApiError(Exception):
@@ -103,9 +103,9 @@ class MockBoardApiClient:
 
 
 class BoardApiClient:
-    """Real HTTP client – connected in Task 9."""
+    from typing import ClassVar
 
-    _ERROR_MAP = {
+    _ERROR_MAP: ClassVar[dict[int, str]] = {
         401: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
         403: "Sie haben keine Berechtigung für diese Aktion.",
         404: "Die angeforderte Ressource wurde nicht gefunden.",

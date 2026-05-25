@@ -13,18 +13,18 @@ _REQUIRED_SECTIONS = [
 
 
 def _full_export(**kwargs) -> str:
-    defaults = dict(
-        question="Wie verbessern wir die Teamkommunikation?",
-        use_case_title="Kommunikationsreview",
-        safety_level="green",
-        board_title="Communications Board",
-        output_format_title="Communication Draft",
-        synthesis="Das Board empfiehlt regelmäßige Retrospektiven.",
-        director_messages=[
+    defaults: dict = {
+        "question": "Wie verbessern wir die Teamkommunikation?",
+        "use_case_title": "Kommunikationsreview",
+        "safety_level": "green",
+        "board_title": "Communications Board",
+        "output_format_title": "Communication Draft",
+        "synthesis": "Das Board empfiehlt regelmäßige Retrospektiven.",
+        "director_messages": [
             {"role": "Stratege", "round": 1, "content": "Ich sehe Potenzial."},
             {"role": "CFO-Skeptiker", "round": 1, "content": "Die Kosten sind zu prüfen."},
         ],
-    )
+    }
     defaults.update(kwargs)
     return build_markdown_export(**defaults)
 

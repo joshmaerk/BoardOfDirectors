@@ -1,5 +1,4 @@
 import streamlit as st
-
 from components.state import init_session_state
 
 st.set_page_config(

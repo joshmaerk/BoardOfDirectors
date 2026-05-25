@@ -1,11 +1,14 @@
 import streamlit as st
-
 from components.api_client import get_api_client, is_mock_mode
 from components.prompt_coach import build_prompt
 from components.renderers import build_markdown_export
 from components.safety import assess_safety
 from components.state import init_session_state, reset_wizard
-from components.templates import get_board_templates, get_output_format_templates, get_use_case_templates
+from components.templates import (
+    get_board_templates,
+    get_output_format_templates,
+    get_use_case_templates,
+)
 
 init_session_state()
 
@@ -35,7 +38,7 @@ if step == 1:
     use_cases = get_use_case_templates()
 
     options = {uc.key: f"{uc.title} – {uc.description}" for uc in use_cases.values()}
-    current = st.session_state.get("selected_use_case") or list(use_cases.keys())[0]
+    current = st.session_state.get("selected_use_case") or next(iter(use_cases.keys()))
 
     selected_key = st.radio(
         "Wählen Sie den passenden Use Case:",
@@ -204,7 +207,7 @@ elif step == 5:
         "Board",
         options=list(boards.keys()),
         format_func=lambda k: boards[k].title,
-        index=list(boards.keys()).index(st.session_state.get("selected_board", list(boards.keys())[0]))
+        index=list(boards.keys()).index(st.session_state.get("selected_board", next(iter(boards.keys()))))
         if st.session_state.get("selected_board") in boards
         else 0,
     )
@@ -216,7 +219,7 @@ elif step == 5:
         "Ausgabeformat",
         options=list(formats.keys()),
         format_func=lambda k: formats[k].title,
-        index=list(formats.keys()).index(st.session_state.get("selected_output_format", list(formats.keys())[0]))
+        index=list(formats.keys()).index(st.session_state.get("selected_output_format", next(iter(formats.keys()))))
         if st.session_state.get("selected_output_format") in formats
         else 0,
     )

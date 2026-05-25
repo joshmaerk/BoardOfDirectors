@@ -35,17 +35,17 @@ REQUIRED_OUTPUTS = {
 
 def test_all_required_use_cases_present():
     keys = set(get_use_case_templates().keys())
-    assert REQUIRED_USE_CASES <= keys
+    assert keys >= REQUIRED_USE_CASES
 
 
 def test_all_required_boards_present():
     keys = set(get_board_templates().keys())
-    assert REQUIRED_BOARDS <= keys
+    assert keys >= REQUIRED_BOARDS
 
 
 def test_all_required_output_formats_present():
     keys = set(get_output_format_templates().keys())
-    assert REQUIRED_OUTPUTS <= keys
+    assert keys >= REQUIRED_OUTPUTS
 
 
 def test_validate_template_references_returns_empty():

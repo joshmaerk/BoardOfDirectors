@@ -7,8 +7,8 @@ def build_markdown_export(
     synthesis: str,
     director_messages: list[dict],
 ) -> str:
-    _SAFETY_LABELS = {"green": "Grün ✅", "yellow": "Gelb ⚠️", "red": "Rot 🚫"}
-    safety_label = _SAFETY_LABELS.get(safety_level, safety_level)
+    safety_labels = {"green": "Grün ✅", "yellow": "Gelb ⚠️", "red": "Rot 🚫"}
+    safety_label = safety_labels.get(safety_level, safety_level)
 
     lines: list[str] = [
         "# Board of Directors Ergebnis",

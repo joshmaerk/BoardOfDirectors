@@ -1,4 +1,3 @@
-import pytest
 from components.safety import (
     SafetyAssessment,
     assess_safety,

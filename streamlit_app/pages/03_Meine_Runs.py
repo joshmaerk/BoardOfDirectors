@@ -1,5 +1,4 @@
 import streamlit as st
-
 from components.api_client import is_mock_mode
 from components.state import init_session_state
 
