@@ -1,4 +1,5 @@
 import streamlit as st
+
 from components.api_client import is_mock_mode
 
 DEFAULT_STATE: dict = {
