@@ -349,8 +349,8 @@ Siehe [`docs/streamlit-azure-deployment.md`](docs/streamlit-azure-deployment.md)
 
 ## Bekannte Einschränkungen
 
-- **Session-State**: Pro Browser-Tab. Wizard-Daten gehen bei App-Neustart verloren.
-- **Run-Verlauf**: Nur sitzungslokal (`st.session_state`). Persistenz erfordert einen Backend-Endpunkt (noch nicht implementiert).
+- **Session-State**: Pro Browser-Tab. In-progress-Wizard-Daten (Schritte 1–5) gehen bei App-Neustart verloren.
+- **Run-Verlauf**: Im Backend-Modus werden abgeschlossene Runs persistent über `GET /api/v1/runs` geladen. Im Mock-Modus nur sitzungslokal.
 - **Entra-OAuth**: Nicht implementiert. Lokal: `AUTH_DEV_BYPASS=true`. Produktion: Bearer-Token muss extern bereitgestellt werden.
 - **Admin-Seite**: `06_Admin.py` ist nicht implementiert (außerhalb MVP-Scope).
 
