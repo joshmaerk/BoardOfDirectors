@@ -27,12 +27,36 @@ st.divider()
 st.subheader("🚀 Womit möchten Sie starten?")
 
 use_cases = [
-    ("📋 Entscheidungsvorlage", "decision_brief", "Strukturieren Sie eine Entscheidungsvorlage für Ihr Team oder den Vorstand."),
-    ("📣 Kommunikationsreview", "communication_review", "Prüfen Sie Botschaften, Präsentationen oder Stakeholder-Kommunikation."),
-    ("🗂️ Projektstrukturierung", "project_structuring", "Erarbeiten Sie Struktur, Scope und Vorgehen für ein Projekt."),
-    ("⚠️ Risikoherausforderung", "risk_challenge", "Fordern Sie Ihre Risikoeinschätzung mit kritischen Gegenperspektiven heraus."),
-    ("🎯 Strategie-Sparring", "strategy_sparring", "Testen Sie Ihre Strategie gegen erfahrene Kritiker und Berater."),
-    ("💡 Konzeptchallenge", "concept_challenge", "Lassen Sie ein neues Konzept oder eine Idee kritisch prüfen."),
+    (
+        "📋 Entscheidungsvorlage",
+        "decision_brief",
+        "Strukturieren Sie eine Entscheidungsvorlage für Ihr Team oder den Vorstand.",
+    ),
+    (
+        "📣 Kommunikationsreview",
+        "communication_review",
+        "Prüfen Sie Botschaften, Präsentationen oder Stakeholder-Kommunikation.",
+    ),
+    (
+        "🗂️ Projektstrukturierung",
+        "project_structuring",
+        "Erarbeiten Sie Struktur, Scope und Vorgehen für ein Projekt.",
+    ),
+    (
+        "⚠️ Risikoherausforderung",
+        "risk_challenge",
+        "Fordern Sie Ihre Risikoeinschätzung mit kritischen Gegenperspektiven heraus.",
+    ),
+    (
+        "🎯 Strategie-Sparring",
+        "strategy_sparring",
+        "Testen Sie Ihre Strategie gegen erfahrene Kritiker und Berater.",
+    ),
+    (
+        "💡 Konzeptchallenge",
+        "concept_challenge",
+        "Lassen Sie ein neues Konzept oder eine Idee kritisch prüfen.",
+    ),
 ]
 
 cols = st.columns(3)

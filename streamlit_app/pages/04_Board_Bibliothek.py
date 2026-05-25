@@ -26,7 +26,9 @@ for uc in use_cases.values():
     with st.expander(f"**{uc.title}**"):
         st.markdown(uc.description)
         rec_board = boards_map.get(uc.recommended_board)
-        st.markdown(f"**Empfohlenes Board:** {rec_board.title if rec_board else uc.recommended_board}")
+        st.markdown(
+            f"**Empfohlenes Board:** {rec_board.title if rec_board else uc.recommended_board}"
+        )
         st.markdown("**Hilfreiche Kontextfelder:** " + " · ".join(uc.context_fields))
         if st.button("Sparring starten", key=f"lib_start_{uc.key}"):
             st.session_state["selected_use_case"] = uc.key

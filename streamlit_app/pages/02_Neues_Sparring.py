@@ -15,7 +15,9 @@ init_session_state()
 st.title("🗣️ Neues Sparring")
 
 if is_mock_mode():
-    st.info("ℹ️ **Mock-Modus aktiv** – kein Backend konfiguriert. Ergebnisse sind synthetische Beispiele.")
+    st.info(
+        "ℹ️ **Mock-Modus aktiv** – kein Backend konfiguriert. Ergebnisse sind synthetische Beispiele."
+    )
 
 col_reset, _ = st.columns([1, 5])
 with col_reset:
@@ -26,7 +28,10 @@ with col_reset:
 step = st.session_state["wizard_step"]
 
 progress_labels = ["Use Case", "Kontext", "Safety", "Prompt", "Board & Format", "Ergebnis"]
-st.progress((step - 1) / len(progress_labels), text=f"Schritt {step} von {len(progress_labels)}: {progress_labels[step - 1]}")
+st.progress(
+    (step - 1) / len(progress_labels),
+    text=f"Schritt {step} von {len(progress_labels)}: {progress_labels[step - 1]}",
+)
 
 st.divider()
 
@@ -207,7 +212,9 @@ elif step == 5:
         "Board",
         options=list(boards.keys()),
         format_func=lambda k: boards[k].title,
-        index=list(boards.keys()).index(st.session_state.get("selected_board", next(iter(boards.keys()))))
+        index=list(boards.keys()).index(
+            st.session_state.get("selected_board", next(iter(boards.keys())))
+        )
         if st.session_state.get("selected_board") in boards
         else 0,
     )
@@ -219,7 +226,9 @@ elif step == 5:
         "Ausgabeformat",
         options=list(formats.keys()),
         format_func=lambda k: formats[k].title,
-        index=list(formats.keys()).index(st.session_state.get("selected_output_format", next(iter(formats.keys()))))
+        index=list(formats.keys()).index(
+            st.session_state.get("selected_output_format", next(iter(formats.keys())))
+        )
         if st.session_state.get("selected_output_format") in formats
         else 0,
     )
@@ -283,7 +292,9 @@ elif step == 6:
         role = msg.get("role", "Unbekannt")
         round_nr = msg.get("round", "")
         content = msg.get("content", "")
-        with st.expander(f"🎙️ {role}" + (f" (Runde {round_nr})" if round_nr else ""), expanded=False):
+        with st.expander(
+            f"🎙️ {role}" + (f" (Runde {round_nr})" if round_nr else ""), expanded=False
+        ):
             st.markdown(content)
 
     st.divider()

@@ -1,4 +1,5 @@
 """E2E tests for Board-Bibliothek and Hilfe pages."""
+
 from pathlib import Path
 
 import pytest

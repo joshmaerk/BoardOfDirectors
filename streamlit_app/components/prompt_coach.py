@@ -68,7 +68,9 @@ def build_prompt(
             lines.append(f"- {section}")
         lines.append("")
 
-    lines.append("Bitte analysieren Sie die Fragestellung aus Ihrer Perspektive und geben Sie eine fundierte, kritische Einschätzung.")
+    lines.append(
+        "Bitte analysieren Sie die Fragestellung aus Ihrer Perspektive und geben Sie eine fundierte, kritische Einschätzung."
+    )
 
     return PromptDraft(
         prompt="\n".join(lines),

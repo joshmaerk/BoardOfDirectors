@@ -24,10 +24,18 @@ else:
         question = run.get("question", "(keine Fragestellung)")
         synthesis = run.get("synthesis", "")
 
-        _STATUS_ICONS = {"done": "✅", "running": "⏳", "failed": "❌", "cancelled": "🚫", "pending": "🕐"}
+        _STATUS_ICONS = {
+            "done": "✅",
+            "running": "⏳",
+            "failed": "❌",
+            "cancelled": "🚫",
+            "pending": "🕐",
+        }
         icon = _STATUS_ICONS.get(status, "❓")
 
-        with st.expander(f"{icon} Run {run_id} – {question[:60]}{'…' if len(question) > 60 else ''}"):
+        with st.expander(
+            f"{icon} Run {run_id} – {question[:60]}{'…' if len(question) > 60 else ''}"
+        ):
             st.markdown(f"**Status:** {status}")
             st.markdown(f"**Frage:** {question}")
             if synthesis:

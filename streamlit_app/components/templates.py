@@ -140,7 +140,12 @@ _OUTPUT_FORMATS: dict[str, OutputFormatTemplate] = {
         key="risk_log",
         title="Risk Log",
         description="Strukturiertes Risikoprotokoll mit Bewertung und Maßnahmen.",
-        sections=("Risikobeschreibung", "Eintrittswahrscheinlichkeit", "Auswirkung", "Gegenmaßnahmen"),
+        sections=(
+            "Risikobeschreibung",
+            "Eintrittswahrscheinlichkeit",
+            "Auswirkung",
+            "Gegenmaßnahmen",
+        ),
     ),
     "todo_plan": OutputFormatTemplate(
         key="todo_plan",

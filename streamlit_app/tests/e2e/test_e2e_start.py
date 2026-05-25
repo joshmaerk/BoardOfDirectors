@@ -1,4 +1,5 @@
 """E2E tests for the Start page."""
+
 from pathlib import Path
 
 import pytest

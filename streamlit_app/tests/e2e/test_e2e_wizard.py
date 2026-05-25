@@ -1,4 +1,5 @@
 """E2E golden-path wizard test."""
+
 from pathlib import Path
 
 import pytest

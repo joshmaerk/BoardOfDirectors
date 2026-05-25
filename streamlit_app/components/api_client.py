@@ -147,7 +147,9 @@ class BoardApiClient:
         import requests
 
         try:
-            resp = requests.post(f"{self.base_url}{path}", json=payload, headers=self._headers(), timeout=15)
+            resp = requests.post(
+                f"{self.base_url}{path}", json=payload, headers=self._headers(), timeout=15
+            )
         except requests.RequestException as exc:
             raise BoardApiError(f"Netzwerkfehler: {exc}") from exc
         if not resp.ok:

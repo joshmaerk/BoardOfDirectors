@@ -1,4 +1,5 @@
 """E2E safety classification tests (red and yellow)."""
+
 from pathlib import Path
 
 import pytest
@@ -47,7 +48,5 @@ def test_yellow_safety_shows_checkbox(page: Page, streamlit_server: str):
     _reach_step3(page, streamlit_server, "Unsere Strategie für das nächste Budget-Jahr")
 
     expect(page.locator("text=Gelb").first).to_be_visible(timeout=8000)
-    page.screenshot(
-        path=str(SCREENSHOTS_DIR / "wizard_step3_safety_yellow.png"), full_page=True
-    )
+    page.screenshot(path=str(SCREENSHOTS_DIR / "wizard_step3_safety_yellow.png"), full_page=True)
     expect(page.locator("[data-testid='stCheckbox']").first).to_be_visible(timeout=8000)
